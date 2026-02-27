@@ -959,4 +959,6 @@ async def guide(ctx):
     await ctx.send(embed=embed)
 
 keep_alive()
-bot.run(TOKEN)
+
+import os
+bot.run(os.getenv("TOKEN"))
