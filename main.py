@@ -359,6 +359,10 @@ def has_boost(user_data, boost_name):
     return boost_name in user_data["boosts"] and time.time(
     ) < user_data["boosts"][boost_name]
 
+@bot.event
+async def on_ready():
+    print(f"Bot connected as {bot.user}")
+
 @bot.command()
 async def debug_inventory(ctx):
     user_data = get_user_data(ctx.author)
