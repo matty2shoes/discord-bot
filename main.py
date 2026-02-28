@@ -4,7 +4,6 @@ import random
 import time
 import os
 import json
-from dotenv import load_dotenv
 from flask import Flask
 from threading import Thread
 
@@ -20,8 +19,7 @@ def run():
 def keep_alive():
     t = Thread(target=run)
     t.start()
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.environ.get("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
 intents.message_content = True
