@@ -962,4 +962,5 @@ async def guide(ctx):
 keep_alive()
 
 import os
+TOKEN = os.environ.get("TOKEN")
 bot.run(TOKEN)
