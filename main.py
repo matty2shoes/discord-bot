@@ -940,8 +940,8 @@ async def cast(ctx):
     user_data = get_user_data(ctx.author)
     now = time.time()
 
-    if user_id in cooldowns and now - cooldowns[user_id] < 30:
-        remaining = round(30 - (now - cooldowns[user_id]), 1)
+    if user_id in cooldowns and now - cooldowns[user_id] < 31:
+        remaining = round(31 - (now - cooldowns[user_id]), 1)
         await ctx.send(
             f"⏳ {ctx.author.display_name}, you need to wait {remaining}s before fishing again."
         )
@@ -1235,8 +1235,8 @@ async def cooldown_check(ctx):
     user_data = get_user_data(ctx.author)
 
     cast_remaining = 0
-    if user_id in cooldowns and now - cooldowns[user_id] < 30:
-        cast_remaining = 30 - (now - cooldowns[user_id])
+    if user_id in cooldowns and now - cooldowns[user_id] < 31:
+        cast_remaining = 31 - (now - cooldowns[user_id])
 
     adventure_remaining = 0
     if user_id in adventure_cooldowns and now - adventure_cooldowns[
