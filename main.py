@@ -1118,6 +1118,92 @@ async def open_chest(ctx, *, args: str):
         await ctx.send("❌ Please specify a chest name")
         return
 
+    user_data = get_user_data(ctx.author)
+    user_chests = user_data.get("chests", {})
+
+    # Support: sq open all (opens every chest type the user owns)
+    if len(args_list) == 1 and args_list[0] == "all":
+        owned_chests = {
+            name: int(user_chests.get(name, 0))
+            for name in chests
+            if int(user_chests.get(name, 0)) > 0
+        }
+
+        if not owned_chests:
+            await ctx.send("❌ You don't have any chests to open.")
+            return
+
+        total_gold = 0
+        total_xp = 0
+        found_treasures = []
+
+        for chest_name, to_open in owned_chests.items():
+            rewards = chests[chest_name]["rewards"]
+
+            for _ in range(to_open):
+                gold = random.randint(*rewards.get("gold", (0, 0)))
+                xp = random.randint(*rewards.get("xp", (0, 0)))
+                total_gold += gold
+                total_xp += xp
+
+                treasure_config = rewards.get("treasures")
+                if treasure_config:
+                    count_range = treasure_config["count"]
+                    max_tier = treasure_config["max_tier"]
+                    rarity_bias = treasure_config["rarity_bias"]
+                    selected = choose_treasures(max_tier, count_range, rarity_bias)
+
+                    if "treasures" not in user_data:
+                        user_data["treasures"] = {}
+                    user_data.setdefault("inventory", {})
+
+                    for name in selected:
+                        user_data["inventory"][name] = user_data["inventory"].get(name, 0) + 1
+                        user_data["treasures"][name] = user_data["treasures"].get(name, 0) + 1
+                        found_treasures.append(name)
+
+            user_chests[chest_name] -= to_open
+
+        user_data["gold"] += total_gold
+        user_data["xp"] += total_xp
+
+        new_level, xp_into_level, next_level_xp = get_level_info(user_data["xp"])
+        level_up_text = ""
+        if new_level > user_data.get("level", 1):
+            level_up_text = f"\n🎉 You leveled up to **Level {new_level}**!"
+            user_data["level"] = new_level
+
+        opened_lines = [
+            f"{chests[name]['emoji']} **{name.title()}** x{count}"
+            for name, count in owned_chests.items()
+        ]
+
+        embed = discord.Embed(
+            title=f"🎁 {ctx.author.display_name} opened all their chests!",
+            color=discord.Color.gold())
+
+        lines = []
+        lines.extend(opened_lines)
+        lines.append("")
+
+        if found_treasures:
+            treasure_lines = [
+                f"{treasure_index[t]['emoji']} **{t.title()}**"
+                for t in found_treasures
+            ]
+            lines.extend(treasure_lines)
+            lines.append("")
+
+        lines.append(f"<:coin:1399146146315894825> Gold: +{total_gold}")
+        lines.append("")
+        lines.append(
+            f"<:level:1399200622779302004> XP: +{total_xp}{level_up_text}")
+
+        embed.description = "\n".join(lines)
+        await ctx.send(embed=embed)
+        save_users()
+        return
+
     if args_list[-1] == "all":
         amount = "all"
         chest_name_words = args_list[:-1]
@@ -1138,8 +1224,6 @@ async def open_chest(ctx, *, args: str):
         await ctx.send("❌ Not a valid chest type")
         return
 
-    user_data = get_user_data(ctx.author)
-    user_chests = user_data.get("chests", {})
     user_chest_count = user_chests.get(chest_name, 0)
 
     if user_chest_count <= 0:
@@ -1928,7 +2012,7 @@ async def guide(ctx):
         "sq dig – Dig for a chance to find bait in the ground",
         "sq fi / sq fish index – View list of fish and their stats",
         "sq ci / sq chest index – View list of chests and their possible contents",
-        "sq open <chest> – Open a chest from your inventory",
+        "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
     ]
     embed.add_field(
