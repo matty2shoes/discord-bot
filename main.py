@@ -1179,7 +1179,7 @@ async def open_chest(ctx, *, args: str):
         ]
 
         embed = discord.Embed(
-            title=f"🎁 {ctx.author.display_name} opened all their chests!",
+            title=f"{ctx.author.display_name} opened all their chests!",
             color=discord.Color.gold())
 
         lines = []
