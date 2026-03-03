@@ -1525,6 +1525,32 @@ async def buy(ctx, *, item: str):
 
     save_users()
 
+
+@bot.command(aliases=["boostoff", "disableboost"])
+async def disable(ctx, *, boost_name: str):
+    user_data = get_user_data(ctx.author)
+    requested_boost = boost_name.lower().strip()
+
+    if requested_boost not in boosts:
+        await ctx.send(
+            "❌ That boost doesn’t exist. Try `sq disable double cast` or `sq disable autosell`."
+        )
+        return
+
+    active_boosts = user_data.get("boosts", {})
+    if requested_boost not in active_boosts:
+        await ctx.send(
+            f"❌ You don’t have **{requested_boost.title()}** active right now."
+        )
+        return
+
+    del active_boosts[requested_boost]
+    save_users()
+
+    await ctx.send(
+        f"✅ {ctx.author.display_name} disabled **{requested_boost.title()}**."
+    )
+
 @bot.command(aliases=["bait"])
 async def sq_bait(ctx, *, bait_name: str):
     user_data = get_user_data(ctx.author)
