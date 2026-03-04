@@ -123,62 +123,77 @@ fish_pool = [{
     "name": "fish",
     "emoji": "<:fish:1399192790797127861>",
     "xp": 1,
-    "chance": 59.00
+    "chance": 56.486
 }, {
     "name": "chad fish",
     "emoji": "<:chadfish:1399043761413292103>",
     "xp": 30,
-    "chance": 10.00
+    "chance": 9.574
 }, {
     "name": "bebeto bass",
     "emoji": "<:bebeto_bass:1399043708879376405>",
     "xp": 50,
-    "chance": 8.00
+    "chance": 7.659
 }, {
     "name": "superman shark",
     "emoji": "<:superman_shark:1399164285657022566>",
     "xp": 60,
-    "chance": 7.00
+    "chance": 6.702
 }, {
     "name": "benjafish",
     "emoji": "<:benjafish:1399050676063043594>",
     "xp": 70,
-    "chance": 5.00
+    "chance": 4.787
 }, {
     "name": "puffer sid",
     "emoji": "<:sid_pufferfish:1399144009175138426>",
     "xp": 80,
-    "chance": 4.00
+    "chance": 3.83
+}, {
+    "name": "sussy fish",
+    "emoji": "<:sussy_fish:1478545128795668540>",
+    "xp": 85,
+    "chance": 3.83
 }, {
     "name": "slamuel sunny",
     "emoji": "<:slamuel_sunny:1399043599445790800>",
     "xp": 100,
-    "chance": 3.00
+    "chance": 2.872
 }, {
     "name": "nateinator",
     "emoji": "<:nateinator:1399043897044369440>",
     "xp": 150,
-    "chance": 2.00
+    "chance": 1.915
 }, {
     "name": "kermit lefish",
     "emoji": "<:kermit_lefish:1399158630023954452>",
     "xp": 200,
-    "chance": 1.00
+    "chance": 0.957
 }, {
     "name": "mojicuslitus",
     "emoji": "<:mojicuslitus:1399194815517688052>",
     "xp": 300,
-    "chance": 0.90
+    "chance": 0.862
+}, {
+    "name": "sushi fish",
+    "emoji": "<:sushi_fish:1478545129588654190>",
+    "xp": 1200,
+    "chance": 0.42
 }, {
     "name": "SUPER RARE LAM CHAD FISH EXTREME",
     "emoji": "<:slam_extreme:1399043820884066344>",
     "xp": 2500,
-    "chance": 0.09
+    "chance": 0.086
 }, {
     "name": "fih",
     "emoji": "<:fih:1399044570888671262>",
     "xp": 7500,
-    "chance": 0.01
+    "chance": 0.012
+}, {
+    "name": "nemo",
+    "emoji": "<:nemo:1478545130624647208>",
+    "xp": 9000,
+    "chance": 0.008
 }]
 
 rods = {
@@ -254,9 +269,24 @@ treasure_index = {
         "value": 350,
         "tier": 2
     },
+    "cobalt gem": {
+        "emoji": "<:cobalt_gem:1478545122470789120>",
+        "value": 425,
+        "tier": 2
+    },
     "pearl necklace": {
         "emoji": "<:pearl_necklace:1400306812435300393>",
         "value": 500,
+        "tier": 3
+    },
+    "ruby gem": {
+        "emoji": "<:ruby_gem:1478545123922153613>",
+        "value": 700,
+        "tier": 3
+    },
+    "ancient vase": {
+        "emoji": "<:ancient_vase:1478545127768330342>",
+        "value": 900,
         "tier": 3
     },
     "golden chalice": {
@@ -264,9 +294,19 @@ treasure_index = {
         "value": 2000,
         "tier": 4
     },
+    "amethyst gem": {
+        "emoji": "<:amethyst_gem:1478545125264195718>",
+        "value": 2500,
+        "tier": 4
+    },
     "glass eye": {
         "emoji": "<:glass_eye:1400306719275487322>",
         "value": 4000,
+        "tier": 5
+    },
+    "emerald gem": {
+        "emoji": "<:emerald_gem:1478545125977231552>",
+        "value": 5000,
         "tier": 5
     },
     "soup dumpling": {
@@ -343,14 +383,20 @@ baits = {
     "worms": {
         "emoji": "<:worm_bait:1477701918573990030>",
         "price": 75,
-        "multiplier": 1.06,
+        "multiplier": 1.05,
         "singular": "worm"
     },
     "leeches": {
         "emoji": "<:leech_bait:1477701943483957431>",
         "price": 200,
-        "multiplier": 1.12,
+        "multiplier": 1.09,
         "singular": "leech"
+    },
+    "ramen noodles": {
+        "emoji": "<:ramen_bait:1478547233220595844>",
+        "price": 250,
+        "multiplier": 1.14,
+        "singular": "ramen noodle"
     },
     "trippa snippas": {
         "emoji": "<:trippa_snippa_bait:1477701970063134850>",
@@ -544,8 +590,8 @@ async def dig(ctx):
     save_cooldowns()
 
     # 🎯 Roll main outcome
-    outcomes = ["nothing", "worms", "leeches", "trippa snippas"]
-    weights = [30, 40, 20, 10]
+    outcomes = ["nothing", "worms", "leeches", "ramen noodles", "trippa snippas"]
+    weights = [30, 35, 18, 11, 6]
     result = random.choices(outcomes, weights=weights, k=1)[0]
 
     # 💀 Dirt outcome
@@ -564,7 +610,7 @@ async def dig(ctx):
     second = None
 
     if got_second:
-        second = random.choice(["worms", "leeches", "trippa snippas"])
+        second = random.choice(["worms", "leeches", "ramen noodles", "trippa snippas"])
         inv[second] = inv.get(second, 0) + 1
 
     save_users()
@@ -750,7 +796,7 @@ async def net(ctx):
     reward_text = f"<:level:1399200622779302004> XP: +{total_xp}\n"
 
     if has_boost(user_data, "autosell"):
-        reward_text += f"💰 Sold with Autosell for {total_gold} Gold <:coin:1399146146315894825>\n"
+        reward_text += f"<:moneysack:1478545126732333187> Sold with Autosell for {total_gold} Gold <:coin:1399146146315894825>\n"
 
     if level_text:
         reward_text += level_text
@@ -1002,7 +1048,7 @@ async def cast(ctx):
 
         result = f"<:cast_bobber:1399044610684096726> {ctx.author.display_name} caught a **{emoji} {name}**!\n<:level:1399200622779302004> XP: +{xp}"
         if has_boost(user_data, "autosell"):
-            result += f"\n💰 Sold instantly for {gold_earned} <:coin:1399146146315894825> (Autosell Active)"
+            result += f"\n<:moneysack:1478545126732333187> Sold instantly for {gold_earned} <:coin:1399146146315894825> (Autosell Active)"
         results.append(result)
 
     # ✅ STACKED BAIT LOGIC (auto-load next one)
