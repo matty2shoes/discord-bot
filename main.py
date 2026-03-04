@@ -1051,6 +1051,22 @@ async def remove(ctx, member: discord.Member, *, args: str):
     target_data = get_user_data(member)
     inv = target_data.setdefault("inventory", {})
 
+    # ── COINS / GOLD ──
+    if item_name in ["coin", "coins", "gold"]:
+        owned = int(target_data.get("gold", 0))
+        if owned <= 0:
+            await ctx.send("❌ They don't have any coins.")
+            return
+
+        removed = min(qty, owned)
+        target_data["gold"] = owned - removed
+
+        await ctx.send(
+            f"✅ Removed {removed} coin(s) from {member.display_name}."
+        )
+        save_users()
+        return
+
     # ── FISH ──
     # ── FISH ── (case-insensitive)
     fish = next((f for f in fish_pool if f["name"].lower() == item_name), None)
@@ -1323,6 +1339,15 @@ async def give(ctx, member: discord.Member, *, args: str):
     item_name = " ".join(parts).strip()
 
     target_data = get_user_data(member)
+
+    # ── COINS / GOLD ──
+    if item_name in ["coin", "coins", "gold"]:
+        target_data["gold"] = int(target_data.get("gold", 0)) + qty
+        await ctx.send(
+            f"✅ Gave {qty} coin(s) to {member.display_name}."
+        )
+        save_users()
+        return
 
     # ── FISH ──
     # ── FISH ── (case-insensitive)
