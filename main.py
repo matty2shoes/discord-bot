@@ -196,6 +196,28 @@ fish_pool = [{
     "chance": 0.008
 }]
 
+TROPHY_REQUIREMENTS = {
+    "fish": 100,
+    "chad fish": 10,
+    "bebeto bass": 10,
+    "superman shark": 10,
+    "benjafish": 10,
+    "puffer sid": 10,
+    "sussy fish": 10,
+    "slamuel sunny": 10,
+    "nateinator": 10,
+    "kermit lefish": 10,
+    "mojicuslitus": 10,
+    "sushi fish": 10,
+    "SUPER RARE LAM CHAD FISH EXTREME": 1,
+    "fih": 1,
+    "nemo": 1,
+}
+
+TROPHY_DISPLAY_NAMES = {
+    "SUPER RARE LAM CHAD FISH EXTREME": "SRLCFE",
+}
+
 rods = {
     "wooden rod": {
         "emoji": "<:wooden_rod:1399044497068920912>",
@@ -469,6 +491,24 @@ def get_user_data(user):
 
     save_users()
     return users[uid]
+
+
+def normalize_trophy_room(user_data):
+    """Convert old trophy room list format into a count dictionary."""
+    trophy_room = user_data.get("trophy_room", {})
+
+    if isinstance(trophy_room, list):
+        converted = {}
+        for fish_name in trophy_room:
+            converted[fish_name] = converted.get(fish_name, 0) + 1
+        trophy_room = converted
+        user_data["trophy_room"] = trophy_room
+
+    if not isinstance(trophy_room, dict):
+        trophy_room = {}
+        user_data["trophy_room"] = trophy_room
+
+    return trophy_room
 
 
 def get_level_info(xp):
@@ -800,7 +840,8 @@ async def trophy_room_view(ctx):
 
 async def send_trophy_room(ctx):
     user_data = get_user_data(ctx.author)
-    collected = set(user_data.get("trophy_room", []))
+    collected = normalize_trophy_room(user_data)
+    save_users()
 
     rows = []
     columns = 3
@@ -808,13 +849,18 @@ async def send_trophy_room(ctx):
         chunk = fish_pool[i:i + columns]
         row_cells = []
         for fish in chunk:
-            locked = fish["name"] not in collected
-            marker = "✅" if not locked else "⬜"
-            fish_text = "????" if locked else fish["name"].title()
-            row_cells.append(f"{marker} {fish['emoji']} {fish_text}")
-        rows.append(" | ".join(row_cells))
+            fish_name = fish["name"]
+            needed = TROPHY_REQUIREMENTS.get(fish_name, 1)
+            count = int(collected.get(fish_name, 0))
+            count = max(0, min(count, needed))
+            marker = "✅" if count >= needed else "⬜"
+            display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
+            row_cells.append(f"{marker}  {fish['emoji']} {display_name} ({count}/{needed} {display_name})")
+        rows.append("  |  ".join(row_cells))
 
-    completed = len(collected) == len(fish_pool)
+    total_needed = sum(TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
+    total_collected = sum(min(int(collected.get(f["name"], 0)), TROPHY_REQUIREMENTS.get(f["name"], 1)) for f in fish_pool)
+    completed = all(int(collected.get(f["name"], 0)) >= TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
     embed = discord.Embed(
         title=f"🏆 {ctx.author.display_name}'s Trophy Room",
         description="Collect one of every fish by adding them with `sq trophy add <fish>`.",
@@ -825,7 +871,7 @@ async def send_trophy_room(ctx):
 
     embed.add_field(
         name="Progress",
-        value=f"{len(collected)}/{len(fish_pool)} fish placed",
+        value=f"{total_collected}/{total_needed} fish placed",
         inline=False
     )
     embed.set_footer(
@@ -844,15 +890,18 @@ async def send_trophy_room(ctx):
 async def trophy_add(ctx, *, fish_name: str):
     user_data = get_user_data(ctx.author)
     inv = user_data.setdefault("inventory", {})
+    trophy = normalize_trophy_room(user_data)
 
     chosen_fish = next((f["name"] for f in fish_pool if f["name"].lower() == fish_name.lower().strip()), None)
     if not chosen_fish:
         await ctx.send("❌ That fish doesn't exist.")
         return
 
-    trophy = user_data.setdefault("trophy_room", [])
-    if chosen_fish in trophy:
-        await ctx.send("❌ You already placed that fish in your trophy room.")
+    required = TROPHY_REQUIREMENTS.get(chosen_fish, 1)
+    current = int(trophy.get(chosen_fish, 0))
+    if current >= required:
+        shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
+        await ctx.send(f"❌ You already reached the trophy goal for **{shown_name}** ({current}/{required}).")
         return
 
     if inv.get(chosen_fish, 0) < 1:
@@ -863,9 +912,10 @@ async def trophy_add(ctx, *, fish_name: str):
     if inv[chosen_fish] <= 0:
         del inv[chosen_fish]
 
-    trophy.append(chosen_fish)
+    trophy[chosen_fish] = current + 1
     save_users()
-    await ctx.send(f"✅ Added **{chosen_fish.title()}** to your trophy room!")
+    shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
+    await ctx.send(f"✅ Added **{shown_name}** to your trophy room! ({trophy[chosen_fish]}/{required})")
 
 @bot.command()
 async def net(ctx):
