@@ -594,6 +594,28 @@ def rarity_weight(base_chance, rarity_mult):
     return (1.0 / base_chance) ** (rarity_mult - 1.0)
 
 
+def build_personal_fish_odds(user_data):
+    """
+    Build per-fish catch odds after personal rare-fish modifiers.
+    Rods are intentionally excluded from rare-fish weighting.
+    """
+    rarity_mult = 1.0
+
+    if user_data.get("bait") and user_data.get("bait_uses", 0) > 0:
+        bait_name = user_data["bait"]
+        rarity_mult *= float(baits[bait_name]["multiplier"])
+
+    rarity_mult *= get_fishbowl_multiplier(user_data)
+
+    weights = []
+    for f in fish_pool:
+        base = f["chance"]
+        weights.append(base * rarity_weight(base, rarity_mult))
+
+    total_weight = sum(weights) or 1.0
+    return [(fish, (weight / total_weight) * 100.0) for fish, weight in zip(fish_pool, weights)]
+
+
 def choose_treasures(max_tier, count_range, rarity_bias):
     # Filter treasures by max tier
     eligible = [
@@ -2262,24 +2284,44 @@ async def inventory(ctx, member: discord.Member = None):
 
 
 @bot.command(aliases=["fishindex", "fi"])
-async def fish_index(ctx):
+async def fish_index(ctx, *, mode: str = None):
+    mode = (mode or "").strip().lower()
+    user_data = get_user_data(ctx.author)
+
+    show_personal = mode == "me"
+    personal_odds = build_personal_fish_odds(user_data) if show_personal else []
+
     lines = []
-    for fish in fish_pool:
+    for idx, fish in enumerate(fish_pool):
         emoji = fish["emoji"]
         name = fish["name"].title()
-        rarity = fish["chance"]
+        rarity = personal_odds[idx][1] if show_personal else fish["chance"]
         base_gold = fish["xp"]  # or multiply if you want
         lines.append(
-            f"{emoji} **{name}** — {rarity}% chance — {base_gold} <:coin:1399146146315894825>"
+            f"{emoji} **{name}** — {rarity:.3f}% chance — {base_gold} <:coin:1399146146315894825>"
         )
 
-    embed = discord.Embed(title="Fish Index",
+    title = "Fish Index (Personal Odds)" if show_personal else "Fish Index"
+    embed = discord.Embed(title=title,
                           description="\n".join(lines),
                           color=discord.Color.blue())
-    embed.set_footer(
-        text=
-        "*Coins represent base selling price before boosts. XP values are equivalent to base gold price"
-    )
+
+    if show_personal:
+        bait_name = user_data.get("bait")
+        bait_active = bait_name and user_data.get("bait_uses", 0) > 0
+        bait_text = bait_name.title() if bait_active else "None"
+        bowl_mult = get_fishbowl_multiplier(user_data)
+        embed.set_footer(
+            text=(
+                f"Personal odds shown using your active bait ({bait_text}) and fish bowl bonus ({((bowl_mult - 1) * 100):.1f}%). "
+                "Fishing rods do not affect rare fish odds."
+            ))
+    else:
+        embed.set_footer(
+            text=(
+                "*Coins represent base selling price before boosts. XP values are equivalent to base gold price. "
+                "Use `sq fi me` to view your personal fish odds.*"
+            ))
 
     await ctx.send(embed=embed)
 
@@ -2338,7 +2380,7 @@ async def guide(ctx):
         "sq adv / sq adventure – Go on an adventure to find chests",
         "sq bait <bait/none> <amount> – Equip bait to increase odds of catching better fish",
         "sq dig – Dig for a chance to find bait in the ground",
-        "sq fi / sq fish index – View list of fish and their stats",
+        "sq fi / sq fish index – View list of fish and their stats (use `sq fi me` for personal odds)",
         "sq ci / sq chest index – View list of chests and their possible contents",
         "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
