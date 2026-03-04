@@ -411,19 +411,19 @@ baits = {
     "leeches": {
         "emoji": "<:leech_bait:1477701943483957431>",
         "price": 200,
-        "multiplier": 1.06,
+        "multiplier": 1.05,
         "singular": "leech"
     },
     "ramen noodles": {
         "emoji": "<:ramen_bait:1478547233220595844>",
         "price": 250,
-        "multiplier": 1.08,
+        "multiplier": 1.07,
         "singular": "ramen noodle"
     },
     "trippa snippas": {
         "emoji": "<:trippa_snippa_bait:1477701970063134850>",
         "price": 300,
-        "multiplier": 1.11,
+        "multiplier": 1.9,
         "singular": "trippa snippa"
     }
 }
@@ -2325,7 +2325,6 @@ async def guide(ctx):
         "sq ci / sq chest index – View list of chests and their possible contents",
         "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
-        "sq disable <boost> - Remove an active boost",
     ]
     embed.add_field(
         name=
