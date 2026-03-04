@@ -423,7 +423,7 @@ baits = {
     "trippa snippas": {
         "emoji": "<:trippa_snippa_bait:1477701970063134850>",
         "price": 300,
-        "multiplier": 1.9,
+        "multiplier": 1.09,
         "singular": "trippa snippa"
     }
 }
