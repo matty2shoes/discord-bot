@@ -537,25 +537,26 @@ def get_fishbowl_multiplier(user_data):
         if fish:
             total_bonus += fishbowl_fish_bonus(float(fish.get("chance", 0))) - 1.0
 
-    # Cap overall fish bowl bonus so it doesn't get out of hand with 10 slots.
-    return min(1.35, 1.0 + total_bonus)
+    # Cap overall fish bowl bonus at +30% (e.g. 10 nemo in bowl).
+    return min(1.30, 1.0 + total_bonus)
 
 
 def fishbowl_fish_bonus(c):
-
-    # Stronger boosts for rarer bowl fish
-    # (tweak these numbers anytime)
-    if c <= 0.01:
-        return 1.12
-    if c <= 0.10:
-        return 1.10
-    if c <= 1.00:
-        return 1.06
-    if c <= 5.00:
+    # Stronger boosts for rarer bowl fish.
+    # Tuned so 10x nemo (0.008%) gives +30% total odds boost.
+    if c <= 0.008:
         return 1.03
+    if c <= 0.02:
+        return 1.027
+    if c <= 0.10:
+        return 1.023
+    if c <= 1.00:
+        return 1.018
+    if c <= 5.00:
+        return 1.013
     if c <= 15.00:
-        return 1.01
-    return 1.02
+        return 1.008
+    return 1.004
 
 
 def normalize_fish_bowl(user_data):
@@ -858,7 +859,7 @@ async def send_trophy_room(ctx):
     completed = all(int(collected.get(f["name"], 0)) >= TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
     embed = discord.Embed(
         title=f"🏆 {ctx.author.display_name}'s Trophy Room",
-        description="Add fish to your collection by using `sq trophy add <fish>`.",
+        description="Add fish to your collection by using `sq trophy add <fish> <amount>`.",
         color=discord.Color.gold()
     )
 
@@ -882,10 +883,21 @@ async def send_trophy_room(ctx):
 
 
 @trophy_room.command(name="add")
-async def trophy_add(ctx, *, fish_name: str):
+async def trophy_add(ctx, *, fish_input: str):
     user_data = get_user_data(ctx.author)
     inv = user_data.setdefault("inventory", {})
     trophy = normalize_trophy_room(user_data)
+
+    parts = fish_input.strip().rsplit(" ", 1)
+    amount = 1
+    fish_name = fish_input.strip()
+    if len(parts) == 2 and parts[1].isdigit():
+        fish_name = parts[0].strip()
+        amount = int(parts[1])
+
+    if amount < 1:
+        await ctx.send("❌ Amount must be at least 1.")
+        return
 
     chosen_fish = next((f["name"] for f in fish_pool if f["name"].lower() == fish_name.lower().strip()), None)
     if not chosen_fish:
@@ -899,18 +911,36 @@ async def trophy_add(ctx, *, fish_name: str):
         await ctx.send(f"❌ You already reached the trophy goal for **{shown_name}** ({current}/{required}).")
         return
 
-    if inv.get(chosen_fish, 0) < 1:
+    available = int(inv.get(chosen_fish, 0))
+    if available < 1:
         await ctx.send("❌ You need that fish in your inventory to place it in the trophy room.")
         return
 
-    inv[chosen_fish] -= 1
+    remaining_needed = required - current
+    add_amount = min(amount, remaining_needed, available)
+    if add_amount <= 0:
+        shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
+        await ctx.send(f"❌ You already reached the trophy goal for **{shown_name}** ({current}/{required}).")
+        return
+
+    inv[chosen_fish] -= add_amount
     if inv[chosen_fish] <= 0:
         del inv[chosen_fish]
 
-    trophy[chosen_fish] = current + 1
+    trophy[chosen_fish] = current + add_amount
     save_users()
     shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
-    await ctx.send(f"✅ Added **{shown_name}** to your trophy room! ({trophy[chosen_fish]}/{required})")
+    if add_amount < amount:
+        await ctx.send(
+            f"✅ Added **{add_amount} {shown_name}** to your trophy room "
+            f"(requested {amount}). ({trophy[chosen_fish]}/{required})"
+        )
+        return
+
+    await ctx.send(
+        f"✅ Added **{add_amount} {shown_name}** to your trophy room! "
+        f"({trophy[chosen_fish]}/{required})"
+    )
 
 @bot.command()
 async def net(ctx):
@@ -2310,7 +2340,7 @@ async def guide(ctx):
         "sq fish bowl remove <fish nickname> – Remove a specific fish from your fish bowl",
         "sq buy fish bowl slot – Buy +1 fish bowl slot for 2500 gold (up to 10 total)",
         "sq tr / sq trophy / sq trophy room – View your trophy room fish collection",
-        "sq trophy add <fish> – Place one fish into your trophy room collection",
+        "sq trophy add <fish> <amount> – Place fish into your trophy room collection",
         "sq shop – Where you can buy rods, boosts, and more",
         "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
         "sq cd / sq cooldown – Check cooldowns & see active boosts"
