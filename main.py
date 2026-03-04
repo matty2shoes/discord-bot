@@ -9,7 +9,7 @@ from flask import Flask
 from threading import Thread
 
 app = Flask('')
- 
+
 @app.route('/')
 def home():
     return "Bot is running!"
@@ -58,7 +58,7 @@ def format_bait_name(bait_key, amount):
     singular = baits[bait_key].get("singular", bait_key)
     plural = bait_key
     return singular.title() if amount == 1 else plural.title()
-    
+
 cooldowns_file = "cooldowns.json"
 
 cooldowns_file = "cooldowns.json"
@@ -197,7 +197,7 @@ fish_pool = [{
 }]
 
 TROPHY_REQUIREMENTS = {
-    "fish": 100,
+    "fish": 1000,
     "chad fish": 10,
     "bebeto bass": 10,
     "superman shark": 10,
@@ -209,7 +209,7 @@ TROPHY_REQUIREMENTS = {
     "kermit lefish": 10,
     "mojicuslitus": 10,
     "sushi fish": 10,
-    "SUPER RARE LAM CHAD FISH EXTREME": 1,
+    "SUPER RARE LAM CHAD FISH EXTREME": 5,
     "fih": 1,
     "nemo": 1,
 }
@@ -487,7 +487,7 @@ def get_user_data(user):
             users[uid]["fish_bowl"] = None
         if "trophy_room" not in users[uid]:
             users[uid]["trophy_room"] = []
-    
+
 
     save_users()
     return users[uid]
@@ -858,7 +858,7 @@ async def send_trophy_room(ctx):
     completed = all(int(collected.get(f["name"], 0)) >= TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
     embed = discord.Embed(
         title=f"🏆 {ctx.author.display_name}'s Trophy Room",
-        description="Collect one of every fish by adding them with `sq trophy add <fish>`.",
+        description="Add fish to your collection by using `sq trophy add <fish>`.",
         color=discord.Color.gold()
     )
 
@@ -2308,10 +2308,10 @@ async def guide(ctx):
         "sq fish bowl – View fish bowl slots and fish currently in your bowl",
         "sq fish bowl <fish type> <nickname> - Put a fish in your fish bowl to boost rare fish odds (named fish supported)",
         "sq fish bowl remove <fish nickname> – Remove a specific fish from your fish bowl",
+        "sq buy fish bowl slot – Buy +1 fish bowl slot for 2500 gold (up to 10 total)",
         "sq tr / sq trophy / sq trophy room – View your trophy room fish collection",
         "sq trophy add <fish> – Place one fish into your trophy room collection",
         "sq shop – Where you can buy rods, boosts, and more",
-        "sq buy fish bowl slot – Buy +1 fish bowl slot for 2500 gold (up to 10 total)",
         "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
         "sq cd / sq cooldown – Check cooldowns & see active boosts"
     ]
