@@ -843,20 +843,15 @@ async def send_trophy_room(ctx):
     collected = normalize_trophy_room(user_data)
     save_users()
 
-    rows = []
-    columns = 3
-    for i in range(0, len(fish_pool), columns):
-        chunk = fish_pool[i:i + columns]
-        row_cells = []
-        for fish in chunk:
-            fish_name = fish["name"]
-            needed = TROPHY_REQUIREMENTS.get(fish_name, 1)
-            count = int(collected.get(fish_name, 0))
-            count = max(0, min(count, needed))
-            marker = "✅" if count >= needed else "⬜"
-            display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
-            row_cells.append(f"{marker}  {fish['emoji']} {display_name} ({count}/{needed} {display_name})")
-        rows.append("  |  ".join(row_cells))
+    lines = []
+    for fish in fish_pool:
+        fish_name = fish["name"]
+        needed = TROPHY_REQUIREMENTS.get(fish_name, 1)
+        count = int(collected.get(fish_name, 0))
+        count = max(0, min(count, needed))
+        marker = "✅" if count >= needed else "⬜"
+        display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
+        lines.append(f"{marker} {fish['emoji']} **{display_name}** ({count}/{needed})")
 
     total_needed = sum(TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
     total_collected = sum(min(int(collected.get(f["name"], 0)), TROPHY_REQUIREMENTS.get(f["name"], 1)) for f in fish_pool)
@@ -867,7 +862,7 @@ async def send_trophy_room(ctx):
         color=discord.Color.gold()
     )
 
-    embed.add_field(name="Collection Grid", value="\n".join(rows), inline=False)
+    embed.add_field(name="Collection", value="\n".join(lines), inline=False)
 
     embed.add_field(
         name="Progress",
@@ -876,7 +871,7 @@ async def send_trophy_room(ctx):
     )
     embed.set_footer(
         text=(
-            "Once your trophy room is complete, you have the option to sq sail."
+            "Once your trophy room is complete, you'll be able to do something cool that I haven't added yet :0"
         )
     )
 
