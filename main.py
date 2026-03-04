@@ -537,26 +537,18 @@ def get_fishbowl_multiplier(user_data):
         if fish:
             total_bonus += fishbowl_fish_bonus(float(fish.get("chance", 0))) - 1.0
 
-    # Cap overall fish bowl bonus at +50% (e.g. 10 fih in bowl).
-    return min(1.50, 1.0 + total_bonus)
+    # Cap overall fish bowl bonus at +30% (e.g. 10 nemos in bowl).
+    return min(1.30, 1.0 + total_bonus)
 
 
 def fishbowl_fish_bonus(c):
-    # Stronger boosts for rarer bowl fish.
-    # Tuned so 10x fih (0.012%) gives +50% total odds boost.
-    if c <= 0.01:
-        return 1.06
-    if c <= 0.02:
-        return 1.05
-    if c <= 0.10:
-        return 1.045
-    if c <= 1.00:
-        return 1.035
-    if c <= 5.00:
-        return 1.025
-    if c <= 15.00:
-        return 1.015
-    return 1.01
+    # Stronger boosts for rarer bowl fish, with diminishing value for common fish.
+    # Tuned so 10x nemo (0.008%) gives +30% total odds boost.
+    nemo_chance = 0.008
+    chance = max(float(c), nemo_chance)
+    rarity_ratio = (nemo_chance / chance)**0.5
+    bonus_percent = 0.03 * rarity_ratio
+    return 1.0 + bonus_percent
 
 
 def normalize_fish_bowl(user_data):
