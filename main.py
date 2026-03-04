@@ -404,26 +404,26 @@ chests = {
 baits = {
     "worms": {
         "emoji": "<:worm_bait:1477701918573990030>",
-        "price": 75,
-        "multiplier": 1.03,
+        "price": 100,
+        "multiplier": 1.02,
         "singular": "worm"
     },
     "leeches": {
         "emoji": "<:leech_bait:1477701943483957431>",
         "price": 200,
-        "multiplier": 1.05,
+        "multiplier": 1.04,
         "singular": "leech"
     },
     "ramen noodles": {
         "emoji": "<:ramen_bait:1478547233220595844>",
         "price": 250,
-        "multiplier": 1.07,
+        "multiplier": 1.06,
         "singular": "ramen noodle"
     },
     "trippa snippas": {
         "emoji": "<:trippa_snippa_bait:1477701970063134850>",
-        "price": 300,
-        "multiplier": 1.09,
+        "price": 350,
+        "multiplier": 1.08,
         "singular": "trippa snippa"
     }
 }
