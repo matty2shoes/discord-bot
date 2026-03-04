@@ -333,7 +333,7 @@ treasure_index = {
     },
     "soup dumpling": {
         "emoji": "<:soup_dumpling:1477453212868018450>",
-        "value": 15000,
+        "value": 12500,
         "tier": 6
     }
 }
