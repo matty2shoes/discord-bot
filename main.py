@@ -405,25 +405,25 @@ baits = {
     "worms": {
         "emoji": "<:worm_bait:1477701918573990030>",
         "price": 75,
-        "multiplier": 1.05,
+        "multiplier": 1.03,
         "singular": "worm"
     },
     "leeches": {
         "emoji": "<:leech_bait:1477701943483957431>",
         "price": 200,
-        "multiplier": 1.09,
+        "multiplier": 1.06,
         "singular": "leech"
     },
     "ramen noodles": {
         "emoji": "<:ramen_bait:1478547233220595844>",
         "price": 250,
-        "multiplier": 1.14,
+        "multiplier": 1.08,
         "singular": "ramen noodle"
     },
     "trippa snippas": {
         "emoji": "<:trippa_snippa_bait:1477701970063134850>",
         "price": 300,
-        "multiplier": 1.18,
+        "multiplier": 1.11,
         "singular": "trippa snippa"
     }
 }
