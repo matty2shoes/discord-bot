@@ -451,6 +451,7 @@ def get_user_data(user):
             "bait_uses": 0,
             "bait_amount": 0,
             "fish_bowl": None,
+            "trophy_room": [],
         }
     else:
 
@@ -462,6 +463,8 @@ def get_user_data(user):
             users[uid]["bait_amount"] = 0
         if "fish_bowl" not in users[uid]:
             users[uid]["fish_bowl"] = None
+        if "trophy_room" not in users[uid]:
+            users[uid]["trophy_room"] = []
     
 
     save_users()
@@ -482,24 +485,28 @@ def get_fishbowl_multiplier(user_data):
     Returns a multiplier (>1) that boosts rare fish odds based on the fish in the bowl.
     Lower 'chance' fish = bigger boost.
     """
-    bowl = user_data.get("fish_bowl")
-    if not bowl:
+    bowl = normalize_fish_bowl(user_data)
+    fish_entries = bowl.get("fish", [])
+    if not fish_entries:
         return 1.0
 
-    fish_name = bowl.get("fish")
-    if not fish_name:
-        return 1.0
+    total_bonus = 0.0
+    for entry in fish_entries:
+        fish_name = entry.get("fish")
+        fish = next((f for f in fish_pool if f["name"] == fish_name), None)
+        if fish:
+            total_bonus += fishbowl_fish_bonus(float(fish.get("chance", 0))) - 1.0
 
-    fish = next((f for f in fish_pool if f["name"] == fish_name), None)
-    if not fish:
-        return 1.0
+    # Cap overall fish bowl bonus so it doesn't get out of hand with 10 slots.
+    return min(1.35, 1.0 + total_bonus)
 
-    c = float(fish.get("chance", 0))
+
+def fishbowl_fish_bonus(c):
 
     # Stronger boosts for rarer bowl fish
     # (tweak these numbers anytime)
     if c <= 0.01:
-        return 1.12  # fih tier
+        return 1.12
     if c <= 0.10:
         return 1.10
     if c <= 1.00:
@@ -509,6 +516,36 @@ def get_fishbowl_multiplier(user_data):
     if c <= 15.00:
         return 1.01
     return 1.02
+
+
+def normalize_fish_bowl(user_data):
+    bowl = user_data.get("fish_bowl")
+
+    # Old format: {"fish": "name", "nick": "nickname"}
+    if bowl is None:
+        normalized = {"slots": 1, "fish": []}
+    elif isinstance(bowl, dict) and "slots" not in bowl and isinstance(bowl.get("fish"), str):
+        fish_name = bowl.get("fish")
+        nick = bowl.get("nick") or "Unnamed"
+        entries = [{"fish": fish_name, "nick": nick}] if fish_name else []
+        normalized = {"slots": 1, "fish": entries}
+    elif isinstance(bowl, dict):
+        slots = int(bowl.get("slots", 1) or 1)
+        slots = max(1, min(10, slots))
+        entries = []
+        for entry in bowl.get("fish", []):
+            if not isinstance(entry, dict):
+                continue
+            fish_name = entry.get("fish")
+            nick = (entry.get("nick") or "Unnamed").strip()
+            if fish_name and nick:
+                entries.append({"fish": fish_name, "nick": nick})
+        normalized = {"slots": slots, "fish": entries[:slots]}
+    else:
+        normalized = {"slots": 1, "fish": []}
+
+    user_data["fish_bowl"] = normalized
+    return normalized
 
 
 def rarity_weight(base_chance, rarity_mult):
@@ -632,38 +669,67 @@ async def dig(ctx):
 
 @bot.group(invoke_without_command=True)
 async def fish(ctx):
-    await ctx.send("Use `sq fish bowl <fish> <nickname>` (or `sq fish bowl` to view).")
+    await ctx.send(
+        "Use `sq fish bowl` to view, `sq fish bowl <fish> <nickname>` to add, "
+        "or `sq fish bowl remove <fish nickname>` to remove."
+    )
 
 
 @fish.command(name="bowl")
 async def fish_bowl(ctx, *, args: str = None):
     user_data = get_user_data(ctx.author)
     inv = user_data.setdefault("inventory", {})
+    bowl = normalize_fish_bowl(user_data)
 
     # VIEW current bowl
     if not args:
-        bowl = user_data.get("fish_bowl")
-        if not bowl:
+        fish_entries = bowl.get("fish", [])
+        if not fish_entries:
             await ctx.send("Your fish bowl is empty. Use `sq fish bowl <fish> <nickname>`.")
-            return
-
-        fish_name = bowl.get("fish")
-        nick = bowl.get("nick") or "Unnamed"
-        fish_obj = next((f for f in fish_pool if f["name"] == fish_name), None)
-
-        if not fish_obj:
-            await ctx.send("Your fish bowl has an invalid fish saved (tell Matt to fix 💀).")
             return
 
         mult = get_fishbowl_multiplier(user_data)
         percent = int(round((mult - 1) * 100))
+        lines = []
+        for i in range(bowl.get("slots", 1)):
+            if i < len(fish_entries):
+                entry = fish_entries[i]
+                fish_obj = next((f for f in fish_pool if f["name"] == entry.get("fish")), None)
+                if fish_obj:
+                    lines.append(f"`{i + 1}.` {fish_obj['emoji']} **{entry.get('nick', 'Unnamed')}**")
+                else:
+                    lines.append(f"`{i + 1}.` ❓ **Unknown Fish**")
+            else:
+                lines.append(f"`{i + 1}.` ▫️ *Empty slot*")
 
         embed = discord.Embed(
             title=f"{ctx.author.display_name}'s Fishbowl",
-            description=f"{fish_obj['emoji']} **{nick}**\n+{percent}% Rare Fish Odds",
+            description="\n".join(lines) + f"\n\n+{percent}% Rare Fish Odds",
             color=discord.Color.from_rgb(255, 255, 255)
         )
+        embed.set_footer(text=f"Slots Used: {len(fish_entries)}/{bowl.get('slots', 1)}")
         await ctx.send(embed=embed)
+        return
+
+    raw = args.strip()
+    if raw.lower().startswith("remove "):
+        target_nick = raw[7:].strip().lower()
+        if not target_nick:
+            await ctx.send("❌ Format: `sq fish bowl remove <fish nickname>`")
+            return
+
+        fish_entries = bowl.get("fish", [])
+        for i, entry in enumerate(fish_entries):
+            if (entry.get("nick") or "").strip().lower() == target_nick:
+                removed = fish_entries.pop(i)
+                fish_name = removed.get("fish")
+                if fish_name:
+                    inv[fish_name] = inv.get(fish_name, 0) + 1
+                save_users()
+                await ctx.send(f"✅ Removed **{removed.get('nick', 'Unnamed')}** from your fish bowl.")
+                return
+
+        await ctx.send("❌ No fish in your bowl has that nickname.")
         return
 
     parts = args.split()
@@ -690,36 +756,116 @@ async def fish_bowl(ctx, *, args: str = None):
         await ctx.send("❌ That fish doesn’t exist, or you forgot the nickname.")
         return
 
+    if len(bowl.get("fish", [])) >= bowl.get("slots", 1):
+        await ctx.send("❌ Your fish bowl is full. Buy more slots in `sq shop`.")
+        return
+
     # Must own the fish in inventory to put it in bowl
     if inv.get(chosen_fish, 0) < 1:
         await ctx.send("❌ You don’t have that fish in your inventory.")
         return
-
-    # If they already had a bowl fish, return it to inventory first
-    old = user_data.get("fish_bowl")
-    if old and old.get("fish"):
-        old_fish = old["fish"]
-        inv[old_fish] = inv.get(old_fish, 0) + 1
 
     # Move 1 fish into the bowl
     inv[chosen_fish] -= 1
     if inv[chosen_fish] <= 0:
         del inv[chosen_fish]
 
-    user_data["fish_bowl"] = {"fish": chosen_fish, "nick": chosen_nick}
-
-    fish_obj = next((f for f in fish_pool if f["name"] == chosen_fish), None)
+    bowl["fish"].append({"fish": chosen_fish, "nick": chosen_nick})
     mult = get_fishbowl_multiplier(user_data)
     percent = int(round((mult - 1) * 100))
 
     embed = discord.Embed(
         title=f"{ctx.author.display_name}'s Fishbowl",
-        description=f"{fish_obj['emoji']} **{chosen_nick}**\n+{percent}% Rare Fish Odds",
+        description=(
+            f"Added **{chosen_nick}** to your bowl.\n"
+            f"Slots Used: {len(bowl.get('fish', []))}/{bowl.get('slots', 1)}\n"
+            f"+{percent}% Rare Fish Odds"
+        ),
         color=discord.Color.from_rgb(255, 255, 255)
     )
 
     save_users()
     await ctx.send(embed=embed)
+
+
+@bot.group(name="trophy", aliases=["tr"], invoke_without_command=True)
+async def trophy_room(ctx):
+    await send_trophy_room(ctx)
+
+
+@trophy_room.command(name="room")
+async def trophy_room_view(ctx):
+    await send_trophy_room(ctx)
+
+
+async def send_trophy_room(ctx):
+    user_data = get_user_data(ctx.author)
+    collected = set(user_data.get("trophy_room", []))
+
+    rows = []
+    columns = 3
+    for i in range(0, len(fish_pool), columns):
+        chunk = fish_pool[i:i + columns]
+        row_cells = []
+        for fish in chunk:
+            locked = fish["name"] not in collected
+            marker = "✅" if not locked else "⬜"
+            fish_text = "????" if locked else fish["name"].title()
+            row_cells.append(f"{marker} {fish['emoji']} {fish_text}")
+        rows.append(" | ".join(row_cells))
+
+    completed = len(collected) == len(fish_pool)
+    embed = discord.Embed(
+        title=f"🏆 {ctx.author.display_name}'s Trophy Room",
+        description="Collect one of every fish by adding them with `sq trophy add <fish>`.",
+        color=discord.Color.gold()
+    )
+
+    embed.add_field(name="Collection Grid", value="\n".join(rows), inline=False)
+
+    embed.add_field(
+        name="Progress",
+        value=f"{len(collected)}/{len(fish_pool)} fish placed",
+        inline=False
+    )
+    embed.set_footer(
+        text=(
+            "Once your trophy room is complete, you have the option to sq sail."
+        )
+    )
+
+    if completed:
+        embed.color = discord.Color.green()
+
+    await ctx.send(embed=embed)
+
+
+@trophy_room.command(name="add")
+async def trophy_add(ctx, *, fish_name: str):
+    user_data = get_user_data(ctx.author)
+    inv = user_data.setdefault("inventory", {})
+
+    chosen_fish = next((f["name"] for f in fish_pool if f["name"].lower() == fish_name.lower().strip()), None)
+    if not chosen_fish:
+        await ctx.send("❌ That fish doesn't exist.")
+        return
+
+    trophy = user_data.setdefault("trophy_room", [])
+    if chosen_fish in trophy:
+        await ctx.send("❌ You already placed that fish in your trophy room.")
+        return
+
+    if inv.get(chosen_fish, 0) < 1:
+        await ctx.send("❌ You need that fish in your inventory to place it in the trophy room.")
+        return
+
+    inv[chosen_fish] -= 1
+    if inv[chosen_fish] <= 0:
+        del inv[chosen_fish]
+
+    trophy.append(chosen_fish)
+    save_users()
+    await ctx.send(f"✅ Added **{chosen_fish.title()}** to your trophy room!")
 
 @bot.command()
 async def net(ctx):
@@ -1563,6 +1709,25 @@ async def shop(ctx):
         inline=False
     )
 
+    bowl = normalize_fish_bowl(user_data)
+    slots = bowl.get("slots", 1)
+    if slots < 10:
+        embed.add_field(
+            name="━━━━ Fish Bowl Upgrades ━━━━",
+            value=(
+                "**Fish Bowl Slot** — 2500 <:coin:1399146146315894825>\n"
+                f"*Current slots: {slots}/10*\n"
+                "Use `sq buy fish bowl slot` to buy +1 slot."
+            ),
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="━━━━ Fish Bowl Upgrades ━━━━",
+            value="**Maxed out!** Your fish bowl is already at 10/10 slots.",
+            inline=False
+        )
+
     await ctx.send(embed=embed)
 
 
@@ -1582,6 +1747,31 @@ async def buy(ctx, *, item: str):
 
     if qty < 1:
         await ctx.send("bro you can't buy a negative amount 💀")
+        return
+
+    # Fish bowl slot upgrade
+    if item_name in {"fish bowl slot", "fishbowl slot", "bowl slot", "fish bowl"}:
+        bowl = normalize_fish_bowl(user_data)
+        if bowl.get("slots", 1) >= 10:
+            await ctx.send("❌ Your fish bowl already has the max 10 slots.")
+            return
+
+        cost = 2500 * qty
+        possible_slots = min(10, bowl.get("slots", 1) + qty)
+        actual_bought = possible_slots - bowl.get("slots", 1)
+        actual_cost = 2500 * actual_bought
+
+        if user_data.get("gold", 0) < actual_cost:
+            await ctx.send("❌ Not enough gold.")
+            return
+
+        user_data["gold"] -= actual_cost
+        bowl["slots"] = possible_slots
+        save_users()
+        await ctx.send(
+            f"✅ Bought **{actual_bought} fish bowl slot(s)** for {actual_cost} <:coin:1399146146315894825>. "
+            f"Your bowl is now **{bowl['slots']}/10** slots."
+        )
         return
 
     # ✅ Allow singular bait names (worm -> worms, leech -> leeches, etc.)
@@ -2070,9 +2260,14 @@ async def guide(ctx):
     inventory_cmds = [
         "sq p / sq profile – View profile",
         "sq i / sq inventory – View Inventory",
-        "sq fish bowl <fish type> <nickname> - Put a rare fish in your fish bowl to boost rare fish odds (and you can name it!)",
+        "sq fish bowl – View fish bowl slots and fish currently in your bowl",
+        "sq fish bowl <fish type> <nickname> - Put a fish in your fish bowl to boost rare fish odds (named fish supported)",
+        "sq fish bowl remove <fish nickname> – Remove a specific fish from your fish bowl",
+        "sq tr / sq trophy / sq trophy room – View your trophy room fish collection",
+        "sq trophy add <fish> – Place one fish into your trophy room collection",
         "sq shop – Where you can buy rods, boosts, and more",
-        "sq buy <item> – Buy rods or boosts",
+        "sq buy fish bowl slot – Buy +1 fish bowl slot for 2500 gold (up to 10 total)",
+        "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
         "sq cd / sq cooldown – Check cooldowns & see active boosts"
     ]
     embed.add_field(name="━━━━ Inventory & Shops ━━━━",
