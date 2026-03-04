@@ -2325,6 +2325,7 @@ async def guide(ctx):
         "sq ci / sq chest index – View list of chests and their possible contents",
         "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
+        "sq disable <boost> - Remove an active boost",
     ]
     embed.add_field(
         name=
