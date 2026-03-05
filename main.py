@@ -248,7 +248,7 @@ TROPHY_REQUIREMENTS = {
     "bebeto bass": 10,
     "superman shark": 10,
     "benjafish": 10,
-    "star fishman": 10,
+    "Star-Fishman": 10,
     "puffer sid": 10,
     "sussy fish": 10,
     "slamuel sunny": 10,
@@ -314,20 +314,20 @@ rods = {
     },
     "backwards rod": {
         "emoji": "<:backwards_rod:1478909451724390410>",
-        "price": 45000,
+        "price": 50000,
         "bonus": 1.75,
     },
     "cupid rod": {
         "emoji": "<:cupid_rod:1478909535845482569>",
-        "price": 60000,
+        "price": 70000,
         "bonus": 2.00,
-        "double_cast_chance": 0.20,
+        "double_cast_chance": 0.15,
     },
     "deep sea rod": {
         "emoji": "<:deep_sea_rod:1478909563938930878>",
-        "price": 60000,
+        "price": 70000,
         "bonus": 2.00,
-        "treasure_cast_chance": 0.10,
+        "treasure_cast_chance": 0.05,
     },
 }
 
@@ -463,7 +463,7 @@ treasure_index = {
     },
     "skull of destiny": {
         "emoji": "<:skull_destiny:1478919385841143952>",
-        "value": 13250,
+        "value": 13000,
         "tier": 6
     },
     "skull of the golden king": {
@@ -1950,7 +1950,7 @@ async def shop(ctx):
 
         if data.get("treasure_cast_chance", 0) > 0:
             treasure_cast_percent = int(data["treasure_cast_chance"] * 100)
-            abilities.append(f"{treasure_cast_percent}% chance to pull treasure")
+            abilities.append(f"{treasure_cast_percent}% chance to pull a tier 1-4 treasure")
 
         ability_text = ""
         if abilities:
@@ -2572,7 +2572,7 @@ async def chest_index(ctx):
 
             if possible:
                 if min_tier <= 1:
-                    treasure_text = "\n**Possible Treasures:**\n" + ", ".join(possible)
+                    treasure_text = "\n**Tier 1 & 2 Treasures:**\n" + ", ".join(possible)
                 else:
                     treasure_text = f"\n**+ Tier {min_tier} Treasures:**\n" + ", ".join(possible)
 
