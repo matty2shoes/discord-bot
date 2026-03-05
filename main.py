@@ -393,7 +393,7 @@ chests = {
             "gold": (2500, 3500),
             "xp": (2500, 3500),
             "treasures": {
-                "count": (2, 2),
+                "count": (2, 3),
                 "max_tier": 6,
                 "rarity_bias": 0.3
             }
