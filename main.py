@@ -2319,6 +2319,35 @@ async def sell(ctx, *, args: str):
             f"{total} gold <:coin:1399146146315894825>"
         )
 
+    # ✅ special case: "sq sell all treasure"
+    elif parts == ["all", "treasure"]:
+        sold_treasures = []
+        for treasure_name, treasure_data in treasure_index.items():
+            count = inv.get(treasure_name, 0)
+            if count > 0:
+                gold = treasure_data["value"] * count
+                total += gold
+                inv[treasure_name] = 0
+
+                user_data.setdefault("treasures", {})
+                if treasure_name in user_data["treasures"]:
+                    user_data["treasures"][treasure_name] = max(
+                        0, user_data["treasures"][treasure_name] - count
+                    )
+                    if user_data["treasures"][treasure_name] <= 0:
+                        user_data["treasures"].pop(treasure_name, None)
+
+                sold_treasures.append(f"{count} {treasure_name.title()}")
+
+        if not sold_treasures:
+            await ctx.send("❌ You have no treasure to sell.")
+            return
+
+        sold_message = (
+            f"{ctx.author.display_name} sold {', '.join(sold_treasures)} to the treasure trader for "
+            f"{total} gold <:coin:1399146146315894825>"
+        )
+
     else:
         if not parts:
             await ctx.send(
@@ -2381,6 +2410,13 @@ async def sell(ctx, *, args: str):
             inv[name] -= count
             if inv[name] <= 0:
                 del inv[name]
+
+            user_data.setdefault("treasures", {})
+            if name in user_data["treasures"]:
+                user_data["treasures"][name] -= count
+                if user_data["treasures"][name] <= 0:
+                    user_data["treasures"].pop(name, None)
+
             sold_message = (
                 f"{ctx.author.display_name} sold {count} {name.title()} to the treasure trader for "
                 f"{total} gold <:coin:1399146146315894825>"
