@@ -1942,9 +1942,23 @@ async def shop(ctx):
     for name, data in rods.items():
         bonus_percent = int(data.get("bonus", 0) * 100)
         tag = " *(Equipped)*" if name == equipped_rod else ""
+        abilities = []
+
+        if data.get("double_cast_chance", 0) > 0:
+            double_cast_percent = int(data["double_cast_chance"] * 100)
+            abilities.append(f"{double_cast_percent}% chance for an extra fish")
+
+        if data.get("treasure_cast_chance", 0) > 0:
+            treasure_cast_percent = int(data["treasure_cast_chance"] * 100)
+            abilities.append(f"{treasure_cast_percent}% chance to pull treasure")
+
+        ability_text = ""
+        if abilities:
+            ability_text = f"\n*Ability: {' | '.join(abilities)}*"
+
         rod_lines.append(
             f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}\n"
-            f"*+ {bonus_percent}% gold on fish sell*"
+            f"*+ {bonus_percent}% gold on fish sell*{ability_text}"
         )
     for rod_chunk in chunk_lines_for_embed(rod_lines):
         rods_embed.add_field(
