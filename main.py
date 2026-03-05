@@ -142,7 +142,7 @@ fish_pool = [{
 }, {
     "name": "benjafish",
     "emoji": "<:benjafish:1399050676063043594>",
-    "xp": 55,
+    "xp": 60,
     "chance": 4.787
 }, {
     "name": "puffer sid",
