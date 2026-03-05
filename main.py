@@ -1946,10 +1946,9 @@ async def shop(ctx):
             f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}\n"
             f"*+ {bonus_percent}% gold on fish sell*"
         )
-    for idx, rod_chunk in enumerate(chunk_lines_for_embed(rod_lines), start=1):
-        title_suffix = "" if idx == 1 else f" (Page {idx})"
+    for rod_chunk in chunk_lines_for_embed(rod_lines):
         rods_embed.add_field(
-            name=f"━━━━ Rods{title_suffix} ━━━━",
+            name="━━━━ Rods ━━━━",
             value=rod_chunk,
             inline=False
         )
