@@ -1948,10 +1948,12 @@ async def shop(ctx):
         )
     for rod_chunk in chunk_lines_for_embed(rod_lines):
         rods_embed.add_field(
-            name="\u200b",
+            name="",
             value=rod_chunk,
             inline=False
         )
+    while len(rods_embed.fields)%3 != 0:
+        rods_embed.add_field(name="\u200b", value="\u200b", inline=True)
 
     other_embed = build_shop_embed("🛍️ Shop — Boosts, Bait & Fish Bowl")
 
