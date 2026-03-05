@@ -145,7 +145,7 @@ fish_pool = [{
     "xp": 60,
     "chance": 4.526
 }, {
-    "name": "star fishman",
+    "name": "Star-Fishman",
     "emoji": "<:star_fishman:1478913913805340883>",
     "xp": 60,
     "chance": 4.526
@@ -1374,7 +1374,7 @@ async def cast(ctx):
     casts = base_casts
     if cupid_extra_cast > 0 and random.random() < cupid_extra_cast:
         casts += 1
-        results = [f"💘 **Cupid Rod bonus:** You got an extra fish this cast!"]
+        results = ["💘 **Cupid Rod bonus:** You got an extra fish this cast!"]
     else:
         results = []
 
