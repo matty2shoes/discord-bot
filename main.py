@@ -59,6 +59,14 @@ def format_bait_name(bait_key, amount):
     plural = bait_key
     return singular.title() if amount == 1 else plural.title()
 
+def get_treasure_sell_value(treasure_name):
+    treasure = treasure_index.get(treasure_name, {})
+    min_value = int(treasure.get("min_value", treasure.get("value", 0)))
+    max_value = int(treasure.get("max_value", min_value))
+    if max_value < min_value:
+        max_value = min_value
+    return random.randint(min_value, max_value)
+
 
 def chunk_lines_for_embed(lines, max_chars=1024):
     """Split a list of lines into embed-safe chunks."""
@@ -327,7 +335,7 @@ rods = {
         "emoji": "<:deep_sea_rod:1478909563938930878>",
         "price": 70000,
         "bonus": 2.00,
-        "treasure_cast_chance": 0.05,
+        "treasure_cast_chance": 0.10,
     },
 }
 
@@ -353,122 +361,146 @@ boosts = {
 treasure_index = {
     "amber pendant": {
         "emoji": "<:amber_pendant:1400307044514533386>",
-        "value": 150,
+        "min_value": 100,
+        "max_value": 200,
         "tier": 1
     },
     "ruby ring": {
         "emoji": "<:ruby_ring:1400307346093117624>",
-        "value": 200,
+        "min_value": 150,
+        "max_value": 300,
         "tier": 1
     },
     "apatite shard": {
         "emoji": "<:apatite_shard:1400306918634819604>",
-        "value": 350,
+        "min_value": 300,
+        "max_value": 400,
         "tier": 2
     },
     "cobalt gem": {
         "emoji": "<:cobalt_gem:1478545122470789120>",
-        "value": 425,
+        "min_value": 400,
+        "max_value": 500,
         "tier": 2
     },
     "pearl necklace": {
         "emoji": "<:pearl_necklace:1400306812435300393>",
-        "value": 500,
+        "min_value": 500,
+        "max_value": 600,
         "tier": 3
     },
     "ruby gem": {
         "emoji": "<:ruby_gem:1478545123922153613>",
-        "value": 700,
+        "min_value": 650,
+        "max_value": 750,
         "tier": 3
     },
     "ancient vase": {
         "emoji": "<:ancient_vase:1478545127768330342>",
-        "value": 900,
+        "min_value": 850,
+        "max_value": 950,
         "tier": 3
     },
     "golden chalice": {
         "emoji": "<:golden_chalice:1400306658995081247>",
-        "value": 2000,
+        "min_value": 1900,
+        "max_value": 2100,
         "tier": 4
     },
     "amethyst gem": {
         "emoji": "<:amethyst_gem:1478545125264195718>",
-        "value": 2500,
+        "min_value": 2350,
+        "max_value": 2600,
         "tier": 4
     },
     "glass eye": {
         "emoji": "<:glass_eye:1400306719275487322>",
-        "value": 4000,
+        "min_value": 3500,
+        "max_value": 4500,
         "tier": 5
     },
     "emerald gem": {
         "emoji": "<:emerald_gem:1478545125977231552>",
-        "value": 5000,
+        "min_value": 4750,
+        "max_value": 5250,
         "tier": 5
     },
     "soup dumpling": {
         "emoji": "<:soup_dumpling:1477453212868018450>",
-        "value": 12500,
+        "min_value": 12500,
+        "max_value": 15000,
         "tier": 6
     },
     "golden hook": {
         "emoji": "<:golden_hook:1478915008241864837>",
-        "value": 5200,
+        "min_value": 5000,
+        "max_value": 5500,
         "tier": 5
     },
     "bottle o' rum": {
         "emoji": "<:rum_bottle:1478915109412667413>",
-        "value": 225,
+        "min_value": 200,
+        "max_value": 250,
         "tier": 1
     },
     "bottle o' flint water": {
         "emoji": "<:flint_water:1478915354897158155>",
-        "value": 850,
+        "min_value": 800,
+        "max_value": 900,
         "tier": 3
     },
     "crate o' rum": {
         "emoji": "<:rum_crate:1478915492172271798>",
-        "value": 2600,
+        "min_value": 2400,
+        "max_value": 2600,
         "tier": 4
     },
     "skull of cannonball": {
         "emoji": "<:skull_cannonball:1478917065338261644>",
-        "value": 175,
+        "min_value": 150,
+        "max_value": 200,
         "tier": 1
     },
     "skull of the overboard pirate": {
         "emoji": "<:skull_overboard:1478916126795763908>",
-        "value": 780,
+        "min_value": 750,
+        "max_value": 900,
         "tier": 3
     },
     "skull of the banished": {
         "emoji": "<:skull_banished:1478915919026585650>",
-        "value": 920,
+        "min_value": 850,
+        "max_value": 1000,
         "tier": 3
     },
     "skull of wisdom": {
         "emoji": "<:skull_wisdom:1478919962289639595>",
-        "value": 2300,
+        "min_value": 2100,
+        "max_value": 2500,
         "tier": 4
     },
     "ashen skull": {
         "emoji": "<:ashen_skull:1478915638318600202>",
-        "value": 2850,
+        "min_value": 2500,
+        "max_value": 3000,
         "tier": 4
     },
     "skull of betrayal": {
         "emoji": "<:skull_betray:1478919810749300870>",
-        "value": 6100,
+        "min_value": 5500,
+        "max_value": 6500,
         "tier": 5
     },
     "skull of destiny": {
         "emoji": "<:skull_destiny:1478919385841143952>",
-        "value": 13000,
+        "min_value": 12000,
+        "max_value": 13000,
         "tier": 6
     },
     "skull of the golden king": {
         "emoji": "<:skull_king:1478916456141033513>",
-        "value": 14500,
+        "min_value": 14000,
+        "max_value": 16000,
         "tier": 6
     }
 }
@@ -545,19 +577,19 @@ baits = {
     },
     "leeches": {
         "emoji": "<:leech_bait:1477701943483957431>",
-        "price": 200,
+        "price": 250,
         "multiplier": 1.04,
         "singular": "leech"
     },
     "ramen noodles": {
         "emoji": "<:ramen_bait:1478547233220595844>",
-        "price": 250,
+        "price": 350,
         "multiplier": 1.06,
         "singular": "ramen noodle"
     },
     "trippa snippas": {
         "emoji": "<:trippa_snippa_bait:1477701970063134850>",
-        "price": 350,
+        "price": 500,
         "multiplier": 1.08,
         "singular": "trippa snippa"
     }
@@ -1370,14 +1402,15 @@ async def adventure(ctx):
     chosen_name = random.choices(chest_names, weights=weights)[0]
     chest_data = chests[chosen_name]
     emoji = chest_data["emoji"]
+    chest_amount = 2 if random.random() < 0.20 else 1
 
     user_data["chests"][chosen_name] = user_data["chests"].get(chosen_name,
-                                                               0) + 1
+                                                               0) + chest_amount
 
     embed = discord.Embed(
         title="🗺️ Adventure Complete!",
         description=
-        f"{ctx.author.display_name} found a {emoji} **{chosen_name.title()}**!",
+        f"{ctx.author.display_name} found {chest_amount}x {emoji} **{chosen_name.title()}**!",
         color=discord.Color.orange())
     await ctx.send(embed=embed)
     save_users()
@@ -1398,7 +1431,6 @@ async def cast(ctx):
     base_casts = 2 if has_boost(user_data, "double cast") else 1
     cooldowns[user_id] = time.time()
     save_cooldowns()
-    level_ups = 0
 
     equipped_rod = user_data.get("rod", "wooden rod")
     rod_data = rods.get(equipped_rod, {})
@@ -1406,6 +1438,10 @@ async def cast(ctx):
     rarity_bonus = rod_data.get("rarity_bonus", 0)
     cupid_extra_cast = rod_data.get("double_cast_chance", 0)
     deep_sea_treasure_chance = rod_data.get("treasure_cast_chance", 0)
+
+    deep_sea_bonus_treasure = None
+    if deep_sea_treasure_chance > 0 and random.random() < deep_sea_treasure_chance:
+        deep_sea_bonus_treasure = choose_equal_tier_treasure(1, 4)
 
     casts = base_casts
     if cupid_extra_cast > 0 and random.random() < cupid_extra_cast:
@@ -1415,15 +1451,12 @@ async def cast(ctx):
         results = []
 
     for _ in range(casts):
-
         rarity_mult = 1.0
 
-        # bait rarity boost
         if user_data.get("bait") and user_data.get("bait_uses", 0) > 0:
             bait_name = user_data["bait"]
             rarity_mult *= float(baits[bait_name]["multiplier"])
 
-        # fish bowl rarity boost
         rarity_mult *= get_fishbowl_multiplier(user_data)
 
         weights = []
@@ -1440,8 +1473,6 @@ async def cast(ctx):
         user_data["xp"] += xp
         user_data["total_fish"] += 1
 
-        gold_earned = 0
-
         if has_boost(user_data, "autosell"):
             gold_earned = int(xp * (1 + gold_bonus))
             user_data["gold"] += gold_earned
@@ -1451,7 +1482,6 @@ async def cast(ctx):
 
         new_level, xp_into_level, next_level_xp = get_level_info(user_data["xp"])
         if new_level > user_data.get("level", 1):
-            level_ups += new_level - user_data.get("level", 1)
             user_data["level"] = new_level
             results.append(
                 f"🎉 {ctx.author.display_name} leveled up to **Level {new_level}**!"
@@ -1462,33 +1492,28 @@ async def cast(ctx):
             result += f"\n<:moneysack:1478545126732333187> Sold instantly for {gold_earned} <:coin:1399146146315894825> (Autosell Active)"
         results.append(result)
 
-        if deep_sea_treasure_chance > 0 and random.random() < deep_sea_treasure_chance:
-            bonus_treasure = choose_equal_tier_treasure(1, 4)
-            if bonus_treasure:
-                user_data.setdefault("treasures", {})
-                user_data.setdefault("inventory", {})
-                user_data["inventory"][bonus_treasure] = user_data["inventory"].get(
-                    bonus_treasure, 0) + 1
-                user_data["treasures"][bonus_treasure] = user_data["treasures"].get(
-                    bonus_treasure, 0) + 1
-                results.append(
-                    f"🌊 **Deep Sea Rod bonus:** You pulled up {treasure_index[bonus_treasure]['emoji']} **{bonus_treasure.title()}**!"
-                )
 
-    # ✅ STACKED BAIT LOGIC (auto-load next one)
+    if deep_sea_bonus_treasure:
+        user_data.setdefault("treasures", {})
+        user_data.setdefault("inventory", {})
+        user_data["inventory"][deep_sea_bonus_treasure] = user_data["inventory"].get(
+            deep_sea_bonus_treasure, 0) + 1
+        user_data["treasures"][deep_sea_bonus_treasure] = user_data["treasures"].get(
+            deep_sea_bonus_treasure, 0) + 1
+        results.append(
+            f"🌊 **Deep Sea Rod bonus:** You pulled up {treasure_index[deep_sea_bonus_treasure]['emoji']} **{deep_sea_bonus_treasure.title()}**!"
+        )
+
     if user_data.get("bait") and user_data.get("bait_uses", 0) > 0:
         user_data["bait_uses"] -= 1
 
         if user_data["bait_uses"] <= 0:
             expired_bait = user_data["bait"]
-            inv = user_data.setdefault("inventory", {})
-
             equipped_amt = int(user_data.get("bait_amount", 0) or 0)
             if equipped_amt > 0:
                 equipped_amt -= 1
                 user_data["bait_amount"] = equipped_amt
 
-            # If they still have more of that bait equipped, instantly refresh uses
             if user_data.get("bait_amount", 0) > 0:
                 user_data["bait_uses"] = random.randint(4, 7)
                 results.append(
@@ -1600,8 +1625,8 @@ async def open_chest(ctx, *, args: str):
     user_data = get_user_data(ctx.author)
     user_chests = user_data.get("chests", {})
 
-    # Support: sq open all (opens every chest type the user owns)
-    if len(args_list) == 1 and args_list[0] == "all":
+    # Support: sq open all / sq open all chest (opens every chest type the user owns)
+    if (len(args_list) == 1 and args_list[0] == "all") or args_list == ["all", "chest"]:
         owned_chests = {
             name: int(user_chests.get(name, 0))
             for name in chests
@@ -1889,10 +1914,16 @@ async def profile(ctx, member: discord.Member = None):
     gold_bonus_percent = int(rod_data.get("bonus", 0) * 100)
     rarity_bonus_percent = int(rod_data.get("rarity_bonus", 0) * 100)
     rarity_text = f"\n*+ {rarity_bonus_percent}% rarity chance*" if rarity_bonus_percent > 0 else ""
+    abilities = []
+    if rod_data.get("double_cast_chance", 0) > 0:
+        abilities.append(f"{int(rod_data['double_cast_chance'] * 100)}% chance for an extra fish")
+    if rod_data.get("treasure_cast_chance", 0) > 0:
+        abilities.append(f"{int(rod_data['treasure_cast_chance'] * 100)}% chance to pull a tier 1-4 treasure")
+    ability_text = f"\n*Ability: {' | '.join(abilities)}*" if abilities else ""
 
     embed.add_field(
         name="━━━━━ Equipped Rod ━━━━━",
-        value=f"{rod_data['emoji']} {rod.title()}\n*+ {gold_bonus_percent}% gold*{rarity_text}",
+        value=f"{rod_data['emoji']} {rod.title()}\n*+ {gold_bonus_percent}% gold*{rarity_text}{ability_text}",
         inline=False
     )
 
@@ -2325,7 +2356,7 @@ async def sell(ctx, *, args: str):
         for treasure_name, treasure_data in treasure_index.items():
             count = inv.get(treasure_name, 0)
             if count > 0:
-                gold = treasure_data["value"] * count
+                gold = sum(get_treasure_sell_value(treasure_name) for _ in range(count))
                 total += gold
                 inv[treasure_name] = 0
 
@@ -2405,8 +2436,7 @@ async def sell(ctx, *, args: str):
 
         # ── TREASURES ──
         elif name in treasure_index:
-            value = treasure_index[name]["value"]
-            total = value * count
+            total = sum(get_treasure_sell_value(name) for _ in range(count))
             inv[name] -= count
             if inv[name] <= 0:
                 del inv[name]
@@ -2581,6 +2611,31 @@ async def fish_index(ctx, *, mode: str = None):
     await ctx.send(embed=embed)
 
 
+@bot.command(aliases=["ti", "treasureindex"])
+async def treasure_list_index(ctx):
+    sorted_treasures = sorted(
+        treasure_index.items(),
+        key=lambda item: (item[1].get("min_value", item[1].get("value", 0)), item[0])
+    )
+
+    lines = []
+    for name, data in sorted_treasures:
+        min_value = int(data.get("min_value", data.get("value", 0)))
+        max_value = int(data.get("max_value", min_value))
+        value_text = f"{min_value}-{max_value}" if max_value != min_value else f"{min_value}"
+        lines.append(
+            f"{data['emoji']} **{name.title()}** — {value_text} <:coin:1399146146315894825>"
+        )
+
+    embed = discord.Embed(
+        title="Treasure Index",
+        description="\n".join(lines),
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Treasures are listed from lowest to highest minimum sell price.")
+    await ctx.send(embed=embed)
+
+
 @bot.command(aliases=["ci", "chestindex"])
 async def chest_index(ctx):
     lines = []
@@ -2649,7 +2704,9 @@ async def guide(ctx):
         "sq dig – Dig for a chance to find bait in the ground",
         "sq fi / sq fish index – View list of fish and their stats (use sq fi me for personal, weighted odds)",
         "sq ci / sq chest index – View list of chests and their possible contents",
+        "sq ti / sq treasure index – View treasures sorted by minimum sell value",
         "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
+        "sq open all chest – Open every chest in your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
         "sq disable <boost> - Disable an active boost",
     ]
