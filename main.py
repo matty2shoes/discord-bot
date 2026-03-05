@@ -1935,7 +1935,7 @@ async def shop(ctx):
         embed.add_field(name="Your Gold", value=gold_display, inline=False)
         return embed
 
-    rods_embed = build_shop_embed("🛍️ Ship Quest Shop — Rods")
+    rods_embed = build_shop_embed("🛍️ Shop — Rods")
 
     # ━━━ RODS PAGE ━━━
     rod_lines = []
@@ -1954,7 +1954,7 @@ async def shop(ctx):
             inline=False
         )
 
-    other_embed = build_shop_embed("🛍️ Ship Quest Shop — Boosts, Bait & Fish Bowl")
+    other_embed = build_shop_embed("🛍️ Shop — Boosts, Bait & Fish Bowl")
 
     # ━━━ BOOSTS ━━━
     boost_lines = []
