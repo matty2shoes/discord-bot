@@ -2647,7 +2647,7 @@ async def guide(ctx):
         "sq adv / sq adventure – Go on an adventure to find chests",
         "sq bait <bait/none> <amount> – Equip bait to increase odds of catching better fish",
         "sq dig – Dig for a chance to find bait in the ground",
-        "sq fi / sq fish index – View list of fish and their stats (use `sq fi me` for personal, weighted odds)",
+        "sq fi / sq fish index – View list of fish and their stats (use sq fi me for personal, weighted odds)",
         "sq ci / sq chest index – View list of chests and their possible contents",
         "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
@@ -2687,6 +2687,7 @@ async def guide(ctx):
                 "-The rarer the fish that a player has in their bowl, the more of a % boost they'll be given.",
                 "-Players can have up to 10 fish in their bowl at once, and can name them to make them unique!",
                 "-You start with 1 free slot, and can buy up to 9 more from the shop with `sq buy fish bowl slot` for 2500 gold each.",
+                "-Do `sq fish bowl remove <nickname>` to remove a fish from your bowl. This fish will return to your inventory.",
             ]),
             []),
         "Trophy Rooms": build_guide_embed(
