@@ -127,37 +127,37 @@ fish_pool = [{
 }, {
     "name": "chad fish",
     "emoji": "<:chadfish:1399043761413292103>",
-    "xp": 30,
+    "xp": 20,
     "chance": 9.574
 }, {
     "name": "bebeto bass",
     "emoji": "<:bebeto_bass:1399043708879376405>",
-    "xp": 50,
+    "xp": 35,
     "chance": 7.659
 }, {
     "name": "superman shark",
     "emoji": "<:superman_shark:1399164285657022566>",
-    "xp": 60,
+    "xp": 45,
     "chance": 6.702
 }, {
     "name": "benjafish",
     "emoji": "<:benjafish:1399050676063043594>",
-    "xp": 70,
+    "xp": 55,
     "chance": 4.787
 }, {
     "name": "puffer sid",
     "emoji": "<:sid_pufferfish:1399144009175138426>",
-    "xp": 80,
+    "xp": 69,
     "chance": 3.83
 }, {
     "name": "sussy fish",
     "emoji": "<:sussy_fish:1478545128795668540>",
-    "xp": 85,
+    "xp": 80,
     "chance": 3.83
 }, {
     "name": "slamuel sunny",
     "emoji": "<:slamuel_sunny:1399043599445790800>",
-    "xp": 100,
+    "xp": 90,
     "chance": 2.872
 }, {
     "name": "nateinator",
@@ -172,17 +172,17 @@ fish_pool = [{
 }, {
     "name": "mojicuslitus",
     "emoji": "<:mojicuslitus:1399194815517688052>",
-    "xp": 300,
+    "xp": 275,
     "chance": 0.862
 }, {
     "name": "sushi fish",
     "emoji": "<:sushi_fish:1478545129588654190>",
-    "xp": 1200,
+    "xp": 600,
     "chance": 0.42
 }, {
     "name": "SUPER RARE LAM CHAD FISH EXTREME",
     "emoji": "<:slam_extreme:1399043820884066344>",
-    "xp": 2500,
+    "xp": 2000,
     "chance": 0.086
 }, {
     "name": "fih",
@@ -192,7 +192,7 @@ fish_pool = [{
 }, {
     "name": "nemo",
     "emoji": "<:nemo:1478545130624647208>",
-    "xp": 9000,
+    "xp": 10000,
     "chance": 0.008
 }]
 
