@@ -487,8 +487,8 @@ treasure_index = {
     },
     "skull of betrayal": {
         "emoji": "<:skull_betray:1478919810749300870>",
-        "min_value": 5500,
-        "max_value": 6500,
+        "min_value": 6500,
+        "max_value": 7500,
         "tier": 5
     },
     "skull of destiny": {
