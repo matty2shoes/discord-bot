@@ -59,6 +59,42 @@ def format_bait_name(bait_key, amount):
     plural = bait_key
     return singular.title() if amount == 1 else plural.title()
 
+
+def chunk_lines_for_embed(lines, max_chars=1024):
+    """Split a list of lines into embed-safe chunks."""
+    chunks = []
+    current = []
+    current_len = 0
+
+    for line in lines:
+        line_len = len(line) + (1 if current else 0)  # account for join newline
+
+        # If a single line is somehow too long, hard-split it to stay safe.
+        if len(line) > max_chars:
+            if current:
+                chunks.append("\n".join(current))
+                current = []
+                current_len = 0
+
+            start = 0
+            while start < len(line):
+                chunks.append(line[start:start + max_chars])
+                start += max_chars
+            continue
+
+        if current_len + line_len > max_chars:
+            chunks.append("\n".join(current))
+            current = [line]
+            current_len = len(line)
+        else:
+            current.append(line)
+            current_len += line_len
+
+    if current:
+        chunks.append("\n".join(current))
+
+    return chunks
+
 cooldowns_file = "cooldowns.json"
 
 cooldowns_file = "cooldowns.json"
@@ -1919,11 +1955,13 @@ async def shop(ctx):
             f"*+ {bonus_percent}% gold on fish sell*"
         )
 
-    embed.add_field(
-        name="━━━━ Rods ━━━━",
-        value="\n".join(rod_lines),
-        inline=False
-    )
+    for idx, rod_chunk in enumerate(chunk_lines_for_embed(rod_lines), start=1):
+        title_suffix = "" if idx == 1 else f" (Page {idx})"
+        embed.add_field(
+            name=f"━━━━ Rods{title_suffix} ━━━━",
+            value=rod_chunk,
+            inline=False
+        )
 
     # ━━━ BOOSTS ━━━
     boost_lines = []
@@ -1935,11 +1973,13 @@ async def shop(ctx):
             f"*{data['description']}*"
         )
 
-    embed.add_field(
-        name="━━━━ <:boosts:1399198567486197791> Boosts ━━━━",
-        value="\n".join(boost_lines),
-        inline=False
-    )
+    for idx, boost_chunk in enumerate(chunk_lines_for_embed(boost_lines), start=1):
+        title_suffix = "" if idx == 1 else f" (Page {idx})"
+        embed.add_field(
+            name=f"━━━━ <:boosts:1399198567486197791> Boosts{title_suffix} ━━━━",
+            value=boost_chunk,
+            inline=False
+        )
 
     # ━━━ BAITS ━━━
     bait_lines = []
@@ -1954,11 +1994,13 @@ async def shop(ctx):
             f"*+{percent}% rare fish odds*"
         )
 
-    embed.add_field(
-        name="━━━━ Bait ━━━━",
-        value="\n".join(bait_lines),
-        inline=False
-    )
+    for idx, bait_chunk in enumerate(chunk_lines_for_embed(bait_lines), start=1):
+        title_suffix = "" if idx == 1 else f" (Page {idx})"
+        embed.add_field(
+            name=f"━━━━ Bait{title_suffix} ━━━━",
+            value=bait_chunk,
+            inline=False
+        )
 
     bowl = normalize_fish_bowl(user_data)
     slots = bowl.get("slots", 1)
