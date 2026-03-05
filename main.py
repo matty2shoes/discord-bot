@@ -1948,7 +1948,7 @@ async def shop(ctx):
         )
     for rod_chunk in chunk_lines_for_embed(rod_lines):
         rods_embed.add_field(
-            name="━━━━ Rods ━━━━",
+            name="\u200b",
             value=rod_chunk,
             inline=False
         )
