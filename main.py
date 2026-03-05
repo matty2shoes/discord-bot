@@ -16,7 +16,7 @@ def home():
 
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=5000)
 
 
 def keep_alive():
@@ -2571,7 +2571,7 @@ async def guide(ctx):
         "sq adv / sq adventure – Go on an adventure to find chests",
         "sq bait <bait/none> <amount> – Equip bait to increase odds of catching better fish",
         "sq dig – Dig for a chance to find bait in the ground",
-        "sq fi / sq fish index – View list of fish and their stats (use `sq fi me` for personal odds)",
+        "sq fi / sq fish index – View list of fish and their stats (use `sq fi me` for personal, weighted odds)",
         "sq ci / sq chest index – View list of chests and their possible contents",
         "sq open <chest/all> – Open a specific chest type or all chests from your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
@@ -2586,12 +2586,9 @@ async def guide(ctx):
     inventory_cmds = [
         "sq p / sq profile – View profile",
         "sq i / sq inventory – View Inventory",
-        "sq fish bowl – View fish bowl slots and fish currently in your bowl",
-        "sq fish bowl <fish type> <nickname> - Put a fish in your fish bowl to boost rare fish odds (named fish supported)",
-        "sq fish bowl remove <fish nickname> – Remove a specific fish from your fish bowl",
-        "sq buy fish bowl slot – Buy +1 fish bowl slot for 2500 gold (up to 10 total)",
+        "sq fish bowl – View fish bowl guide for details!",
         "sq tr / sq trophy / sq trophy room – View your trophy room fish collection",
-        "sq trophy add <fish> <amount> – Place fish into your trophy room collection",
+        "sq trophy room – View trophy room guide for details!",
         "sq shop – Where you can buy rods, boosts, and more",
         "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
         "sq cd / sq cooldown – Check cooldowns & see active boosts"
@@ -2608,11 +2605,18 @@ async def guide(ctx):
     tutorial_pages = {
         "Fish Bowls": build_guide_embed(
             "📘 Guide Tutorial: Fish Bowls",
-            "Placeholder tutorial page for fish bowl mechanics. More tutorials will be added as buttons here over time.",
+            "-Having fish in a bowl allows players to increase their odds of finding rarer fish!",
+            "-You can enter a fish into your bowl by using `sq fish bowl <fish> <nickname>`.",
+            "-The rarer the fish that a player has in their bowl, the more of a % boost they'll be given.",
+            "-Players can have up to 10 fish in their bowl at once, and can name them to make them unique!",
+            "-You start with 1 free slot, and can buy up to 9 more from the shop with `sq buy fish bowl slot` for 2500 gold each.",
             []),
         "Trophy Rooms": build_guide_embed(
             "📘 Guide Tutorial: Trophy Rooms",
-            "Placeholder tutorial page for trophy room mechanics. More tutorials will be added as buttons here over time.",
+            "-A player's trophy room requires many fish to be filled up, and once completely filled, will do something! Undisclosed as of now! Yay!",
+            "-To add fish to your trophy room, use `sq trophy add <fish> <amount>`",
+            "-To view your fish bowl, simply do `sq trophy` or `sq trophy room`",
+            "Note that there is currently no way to remove a fish from your trophy room!",
             []),
     }
 
