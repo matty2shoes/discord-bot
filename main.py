@@ -1928,54 +1928,45 @@ async def shop(ctx):
     user_data = get_user_data(ctx.author)
     user_gold = user_data.get("gold", 0)
     gold_display = f"{user_gold} <:coin:1399146146315894825>"
+    equipped_rod = user_data.get("rod", "wooden rod")
 
-    equipped_rod = user_data.get("rod", "wooden")
-    active_boosts = user_data.get("boosts", [])
+    def build_shop_embed(title):
+        embed = discord.Embed(title=title, color=discord.Color.red())
+        embed.add_field(name="Your Gold", value=gold_display, inline=False)
+        return embed
 
-    embed = discord.Embed(
-        title="🛍️ Ship Quest Shop",
-        color=discord.Color.red()
-    )
+    rods_embed = build_shop_embed("🛍️ Ship Quest Shop — Rods")
 
-    embed.add_field(
-        name="Your Gold",
-        value=gold_display,
-        inline=False
-    )
-
-    # ━━━ RODS ━━━
+    # ━━━ RODS PAGE ━━━
     rod_lines = []
     for name, data in rods.items():
         bonus_percent = int(data.get("bonus", 0) * 100)
-
         tag = " *(Equipped)*" if name == equipped_rod else ""
-
         rod_lines.append(
             f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}\n"
             f"*+ {bonus_percent}% gold on fish sell*"
         )
-
     for idx, rod_chunk in enumerate(chunk_lines_for_embed(rod_lines), start=1):
         title_suffix = "" if idx == 1 else f" (Page {idx})"
-        embed.add_field(
+        rods_embed.add_field(
             name=f"━━━━ Rods{title_suffix} ━━━━",
             value=rod_chunk,
             inline=False
         )
 
+    other_embed = build_shop_embed("🛍️ Ship Quest Shop — Boosts, Bait & Fish Bowl")
+
     # ━━━ BOOSTS ━━━
     boost_lines = []
     for name, data in boosts.items():
         tag = " *(Active)*" if has_boost(user_data, name) else ""
-
         boost_lines.append(
             f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}\n"
             f"*{data['description']}*"
         )
-
     for idx, boost_chunk in enumerate(chunk_lines_for_embed(boost_lines), start=1):
         title_suffix = "" if idx == 1 else f" (Page {idx})"
-        embed.add_field(
+        other_embed.add_field(
             name=f"━━━━ <:boosts:1399198567486197791> Boosts{title_suffix} ━━━━",
             value=boost_chunk,
             inline=False
@@ -1993,10 +1984,9 @@ async def shop(ctx):
             f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}\n"
             f"*+{percent}% rare fish odds*"
         )
-
     for idx, bait_chunk in enumerate(chunk_lines_for_embed(bait_lines), start=1):
         title_suffix = "" if idx == 1 else f" (Page {idx})"
-        embed.add_field(
+        other_embed.add_field(
             name=f"━━━━ Bait{title_suffix} ━━━━",
             value=bait_chunk,
             inline=False
@@ -2005,7 +1995,7 @@ async def shop(ctx):
     bowl = normalize_fish_bowl(user_data)
     slots = bowl.get("slots", 1)
     if slots < 10:
-        embed.add_field(
+        other_embed.add_field(
             name="━━━━ Fish Bowl Upgrades ━━━━",
             value=(
                 "**Fish Bowl Slot** — 2500 <:coin:1399146146315894825>\n"
@@ -2015,13 +2005,48 @@ async def shop(ctx):
             inline=False
         )
     else:
-        embed.add_field(
+        other_embed.add_field(
             name="━━━━ Fish Bowl Upgrades ━━━━",
             value="**Maxed out!** Your fish bowl is already at 10/10 slots.",
             inline=False
         )
 
-    await ctx.send(embed=embed)
+    class ShopView(discord.ui.View):
+        def __init__(self, author_id):
+            super().__init__(timeout=180)
+            self.author_id = author_id
+
+        async def interaction_check(self, interaction: discord.Interaction):
+            if interaction.user.id != self.author_id:
+                await interaction.response.send_message(
+                    "❌ This shop menu isn't for you.", ephemeral=True)
+                return False
+            return True
+
+    view = ShopView(ctx.author.id)
+
+    async def show_page(interaction, page_name):
+        if page_name == "rods":
+            await interaction.response.edit_message(embed=rods_embed, view=view)
+        else:
+            await interaction.response.edit_message(embed=other_embed, view=view)
+
+    rods_button = discord.ui.Button(label="Rods", style=discord.ButtonStyle.primary)
+    other_button = discord.ui.Button(label="Boosts + Bait + Fish Bowl", style=discord.ButtonStyle.secondary)
+
+    async def rods_callback(interaction):
+        await show_page(interaction, "rods")
+
+    async def other_callback(interaction):
+        await show_page(interaction, "other")
+
+    rods_button.callback = rods_callback
+    other_button.callback = other_callback
+
+    view.add_item(rods_button)
+    view.add_item(other_button)
+
+    await ctx.send(embed=rods_embed, view=view)
 
 
 @bot.command()
@@ -2605,18 +2630,22 @@ async def guide(ctx):
     tutorial_pages = {
         "Fish Bowls": build_guide_embed(
             "📘 Guide Tutorial: Fish Bowls",
-            "-Having fish in a bowl allows players to increase their odds of finding rarer fish!",
-            "-You can enter a fish into your bowl by using `sq fish bowl <fish> <nickname>`.",
-            "-The rarer the fish that a player has in their bowl, the more of a % boost they'll be given.",
-            "-Players can have up to 10 fish in their bowl at once, and can name them to make them unique!",
-            "-You start with 1 free slot, and can buy up to 9 more from the shop with `sq buy fish bowl slot` for 2500 gold each.",
+            "\n".join([
+                "-Having fish in a bowl allows players to increase their odds of finding rarer fish!",
+                "-You can enter a fish into your bowl by using `sq fish bowl <fish> <nickname>`.",
+                "-The rarer the fish that a player has in their bowl, the more of a % boost they'll be given.",
+                "-Players can have up to 10 fish in their bowl at once, and can name them to make them unique!",
+                "-You start with 1 free slot, and can buy up to 9 more from the shop with `sq buy fish bowl slot` for 2500 gold each.",
+            ]),
             []),
         "Trophy Rooms": build_guide_embed(
             "📘 Guide Tutorial: Trophy Rooms",
-            "-A player's trophy room requires many fish to be filled up, and once completely filled, will do something! Undisclosed as of now! Yay!",
-            "-To add fish to your trophy room, use `sq trophy add <fish> <amount>`",
-            "-To view your fish bowl, simply do `sq trophy` or `sq trophy room`",
-            "Note that there is currently no way to remove a fish from your trophy room!",
+            "\n".join([
+                "-A player's trophy room requires many fish to be filled up, and once completely filled, will do something! Undisclosed as of now! Yay!",
+                "-To add fish to your trophy room, use `sq trophy add <fish> <amount>`",
+                "-To view your fish bowl, simply do `sq trophy` or `sq trophy room`",
+                "Note that there is currently no way to remove a fish from your trophy room!",
+            ]),
             []),
     }
 
