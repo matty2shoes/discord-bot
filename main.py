@@ -1441,7 +1441,7 @@ async def cast(ctx):
 
     deep_sea_bonus_treasure = None
     if deep_sea_treasure_chance > 0 and random.random() < deep_sea_treasure_chance:
-        deep_sea_bonus_treasure = choose_equal_tier_treasure(1, 4)
+        deep_sea_bonus_treasure = choose_equal_tier_treasure(1, 3)
 
     casts = base_casts
     if cupid_extra_cast > 0 and random.random() < cupid_extra_cast:
