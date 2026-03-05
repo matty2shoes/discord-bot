@@ -123,72 +123,82 @@ fish_pool = [{
     "name": "fish",
     "emoji": "<:fish:1399192790797127861>",
     "xp": 1,
-    "chance": 56.486
+    "chance": 53.685
 }, {
     "name": "chad fish",
     "emoji": "<:chadfish:1399043761413292103>",
     "xp": 20,
-    "chance": 9.574
+    "chance": 9.054
 }, {
     "name": "bebeto bass",
     "emoji": "<:bebeto_bass:1399043708879376405>",
     "xp": 35,
-    "chance": 7.659
+    "chance": 7.243
 }, {
     "name": "superman shark",
     "emoji": "<:superman_shark:1399164285657022566>",
     "xp": 45,
-    "chance": 6.702
+    "chance": 6.338
 }, {
     "name": "benjafish",
     "emoji": "<:benjafish:1399050676063043594>",
     "xp": 60,
-    "chance": 4.787
+    "chance": 4.526
+}, {
+    "name": "star fishman",
+    "emoji": "<:star_fishman:1478913913805340883>",
+    "xp": 60,
+    "chance": 4.526
 }, {
     "name": "puffer sid",
     "emoji": "<:sid_pufferfish:1399144009175138426>",
     "xp": 69,
-    "chance": 3.83
+    "chance": 3.622
 }, {
     "name": "sussy fish",
     "emoji": "<:sussy_fish:1478545128795668540>",
     "xp": 80,
-    "chance": 3.83
+    "chance": 3.622
 }, {
     "name": "slamuel sunny",
     "emoji": "<:slamuel_sunny:1399043599445790800>",
     "xp": 90,
-    "chance": 2.872
+    "chance": 2.716
 }, {
     "name": "nateinator",
     "emoji": "<:nateinator:1399043897044369440>",
     "xp": 150,
-    "chance": 1.915
+    "chance": 1.811
 }, {
     "name": "kermit lefish",
     "emoji": "<:kermit_lefish:1399158630023954452>",
     "xp": 200,
-    "chance": 0.957
+    "chance": 0.905
 }, {
     "name": "mojicuslitus",
     "emoji": "<:mojicuslitus:1399194815517688052>",
     "xp": 275,
-    "chance": 0.862
+    "chance": 0.815
+}, {
+    "name": "bunnie hatchling",
+    "emoji": "<:bunnie_hatchling:1478913958823071826>",
+    "xp": 420,
+    "chance": 0.64
 }, {
     "name": "sushi fish",
     "emoji": "<:sushi_fish:1478545129588654190>",
     "xp": 600,
-    "chance": 0.42
+    "chance": 0.397
 }, {
     "name": "SUPER RARE LAM CHAD FISH EXTREME",
     "emoji": "<:slam_extreme:1399043820884066344>",
     "xp": 2000,
-    "chance": 0.086
+    "chance": 0.081
 }, {
     "name": "fih",
     "emoji": "<:fih:1399044570888671262>",
     "xp": 7500,
-    "chance": 0.012
+    "chance": 0.011
 }, {
     "name": "nemo",
     "emoji": "<:nemo:1478545130624647208>",
@@ -202,12 +212,14 @@ TROPHY_REQUIREMENTS = {
     "bebeto bass": 10,
     "superman shark": 10,
     "benjafish": 10,
+    "star fishman": 10,
     "puffer sid": 10,
     "sussy fish": 10,
     "slamuel sunny": 10,
     "nateinator": 10,
     "kermit lefish": 10,
     "mojicuslitus": 10,
+    "bunnie hatchling": 10,
     "sushi fish": 10,
     "SUPER RARE LAM CHAD FISH EXTREME": 5,
     "fih": 1,
@@ -253,6 +265,33 @@ rods = {
         "emoji": "<:tryhard_rod:1399176725283471411>",
         "price": 20000,
         "bonus": 1.00,
+    },
+    "brumin rod": {
+        "emoji": "<:brumin_rod:1478909374964433144>",
+        "price": 30000,
+        "bonus": 1.25,
+    },
+    "tilda rod": {
+        "emoji": "<:tilda_rod:1478909423169568970>",
+        "price": 37500,
+        "bonus": 1.50,
+    },
+    "backwards rod": {
+        "emoji": "<:backwards_rod:1478909451724390410>",
+        "price": 45000,
+        "bonus": 1.75,
+    },
+    "cupid rod": {
+        "emoji": "<:cupid_rod:1478909535845482569>",
+        "price": 60000,
+        "bonus": 2.00,
+        "double_cast_chance": 0.20,
+    },
+    "deep sea rod": {
+        "emoji": "<:deep_sea_rod:1478909563938930878>",
+        "price": 60000,
+        "bonus": 2.00,
+        "treasure_cast_chance": 0.10,
     },
 }
 
@@ -334,6 +373,66 @@ treasure_index = {
     "soup dumpling": {
         "emoji": "<:soup_dumpling:1477453212868018450>",
         "value": 12500,
+        "tier": 6
+    },
+    "golden hook": {
+        "emoji": "<:golden_hook:1478915008241864837>",
+        "value": 5200,
+        "tier": 5
+    },
+    "bottle o' rum": {
+        "emoji": "<:rum_bottle:1478915109412667413>",
+        "value": 225,
+        "tier": 1
+    },
+    "bottle o' flint water": {
+        "emoji": "<:flint_water:1478915354897158155>",
+        "value": 850,
+        "tier": 3
+    },
+    "crate o' rum": {
+        "emoji": "<:rum_crate:1478915492172271798>",
+        "value": 2600,
+        "tier": 4
+    },
+    "skull of cannonball": {
+        "emoji": "<:skull_cannonball:1478917065338261644>",
+        "value": 175,
+        "tier": 1
+    },
+    "skull of the overboard pirate": {
+        "emoji": "<:skull_overboard:1478916126795763908>",
+        "value": 780,
+        "tier": 3
+    },
+    "skull of the banished": {
+        "emoji": "<:skull_banished:1478915919026585650>",
+        "value": 920,
+        "tier": 3
+    },
+    "skull of wisdom": {
+        "emoji": "<:skull_wisdom:1478919962289639595>",
+        "value": 2300,
+        "tier": 4
+    },
+    "ashen skull": {
+        "emoji": "<:ashen_skull:1478915638318600202>",
+        "value": 2850,
+        "tier": 4
+    },
+    "skull of betrayal": {
+        "emoji": "<:skull_betray:1478919810749300870>",
+        "value": 6100,
+        "tier": 5
+    },
+    "skull of destiny": {
+        "emoji": "<:skull_destiny:1478919385841143952>",
+        "value": 13250,
+        "tier": 6
+    },
+    "skull of the golden king": {
+        "emoji": "<:skull_king:1478916456141033513>",
+        "value": 14500,
         "tier": 6
     }
 }
@@ -638,6 +737,23 @@ def choose_treasures(max_tier, count_range, rarity_bias):
         selected.append(chosen)
 
     return selected
+
+
+def choose_equal_tier_treasure(min_tier, max_tier):
+    eligible_tiers = [
+        tier for tier in range(min_tier, max_tier + 1)
+        if any(info["tier"] == tier for info in treasure_index.values())
+    ]
+    if not eligible_tiers:
+        return None
+
+    chosen_tier = random.choice(eligible_tiers)
+    tier_items = [
+        name for name, info in treasure_index.items() if info["tier"] == chosen_tier
+    ]
+    if not tier_items:
+        return None
+    return random.choice(tier_items)
 
 
 def roll_fish():
@@ -1024,7 +1140,7 @@ async def net(ctx):
 
     embed = discord.Embed(
         description=
-        f"{ctx.author.display_name} threw out a fishing net and caught **{catch_amount} fish!**\n\n"
+        f"<:net:1478917596807172126> {ctx.author.display_name} threw out a fishing net and caught **{catch_amount} fish!**\n\n"
         + "\n".join(summary_lines),
         color=discord.Color.teal())
 
@@ -1243,7 +1359,7 @@ async def cast(ctx):
         )
         return
 
-    casts = 2 if has_boost(user_data, "double cast") else 1
+    base_casts = 2 if has_boost(user_data, "double cast") else 1
     cooldowns[user_id] = time.time()
     save_cooldowns()
     level_ups = 0
@@ -1252,8 +1368,16 @@ async def cast(ctx):
     rod_data = rods.get(equipped_rod, {})
     gold_bonus = rod_data.get("bonus", 0)
     rarity_bonus = rod_data.get("rarity_bonus", 0)
+    cupid_extra_cast = rod_data.get("double_cast_chance", 0)
+    deep_sea_treasure_chance = rod_data.get("treasure_cast_chance", 0)
 
-    results = []
+    casts = base_casts
+    if cupid_extra_cast > 0 and random.random() < cupid_extra_cast:
+        casts += 1
+        results = [f"💘 **Cupid Rod bonus:** You got an extra fish this cast!"]
+    else:
+        results = []
+
     for _ in range(casts):
 
         rarity_mult = 1.0
@@ -1301,6 +1425,19 @@ async def cast(ctx):
         if has_boost(user_data, "autosell"):
             result += f"\n<:moneysack:1478545126732333187> Sold instantly for {gold_earned} <:coin:1399146146315894825> (Autosell Active)"
         results.append(result)
+
+        if deep_sea_treasure_chance > 0 and random.random() < deep_sea_treasure_chance:
+            bonus_treasure = choose_equal_tier_treasure(1, 4)
+            if bonus_treasure:
+                user_data.setdefault("treasures", {})
+                user_data.setdefault("inventory", {})
+                user_data["inventory"][bonus_treasure] = user_data["inventory"].get(
+                    bonus_treasure, 0) + 1
+                user_data["treasures"][bonus_treasure] = user_data["treasures"].get(
+                    bonus_treasure, 0) + 1
+                results.append(
+                    f"🌊 **Deep Sea Rod bonus:** You pulled up {treasure_index[bonus_treasure]['emoji']} **{bonus_treasure.title()}**!"
+                )
 
     # ✅ STACKED BAIT LOGIC (auto-load next one)
     if user_data.get("bait") and user_data.get("bait_uses", 0) > 0:
@@ -2329,6 +2466,7 @@ async def fish_index(ctx, *, mode: str = None):
 @bot.command(aliases=["ci", "chestindex"])
 async def chest_index(ctx):
     lines = []
+    previous_max_tier = 0
 
     for name, chest in chests.items():
         emoji = chest["emoji"]
@@ -2342,15 +2480,21 @@ async def chest_index(ctx):
 
         if treasure_config:
             max_tier = treasure_config["max_tier"]
+            min_tier = previous_max_tier + 1
 
             possible = [
                 f"{treasure_index[t]['emoji']} {t.title()}"
                 for t, data in treasure_index.items()
-                if data["tier"] <= max_tier
+                if min_tier <= data["tier"] <= max_tier
             ]
 
             if possible:
-                treasure_text = "\n**Possible Treasures:**\n" + ", ".join(possible)
+                if min_tier <= 1:
+                    treasure_text = "\n**Possible Treasures:**\n" + ", ".join(possible)
+                else:
+                    treasure_text = f"\n**+ Tier {min_tier} Treasures:**\n" + ", ".join(possible)
+
+            previous_max_tier = max_tier
 
         lines.append(
             f"{emoji} __**{name.title()}**__\n"
@@ -2371,8 +2515,13 @@ async def chest_index(ctx):
 
 @bot.command()
 async def guide(ctx):
-    embed = discord.Embed(title="📘 Ship Quest Guide",
-                          color=discord.Color.green())
+    def build_guide_embed(title, description, fields):
+        embed = discord.Embed(title=title, description=description, color=discord.Color.green())
+        for field_name, field_value in fields:
+            embed.add_field(name=field_name, value=field_value, inline=False)
+        return embed
+
+    home_embed = build_guide_embed("📘 Ship Quest Guide", None, [])
 
     fishing_cmds = [
         "sq cast – Cast your rod for a fish",
@@ -2386,7 +2535,7 @@ async def guide(ctx):
         "sq sell <item> – Sell fish, treasures, or bait for gold",
         "sq disable <boost> - Disable an active boost",
     ]
-    embed.add_field(
+    home_embed.add_field(
         name=
         "━━━━ <:wooden_rod:1399044497068920912> Fishing & Loot Commands <:chest:1399491916978192406> ━━━━",
         value="\n".join(fishing_cmds),
@@ -2405,16 +2554,64 @@ async def guide(ctx):
         "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
         "sq cd / sq cooldown – Check cooldowns & see active boosts"
     ]
-    embed.add_field(name="━━━━ Inventory & Shops ━━━━",
+    home_embed.add_field(name="━━━━ Inventory & Shops ━━━━",
                     value="\n".join(inventory_cmds),
                     inline=False)
 
     misc_cmds = ["sq guide – You're already here brev so idk what to tell u"]
-    embed.add_field(name="━━━━ Miscellaneous ━━━━",
+    home_embed.add_field(name="━━━━ Miscellaneous ━━━━",
                     value="\n".join(misc_cmds),
                     inline=False)
 
-    await ctx.send(embed=embed)
+    tutorial_pages = {
+        "Fish Bowls": build_guide_embed(
+            "📘 Guide Tutorial: Fish Bowls",
+            "Placeholder tutorial page for fish bowl mechanics. More tutorials will be added as buttons here over time.",
+            []),
+        "Trophy Rooms": build_guide_embed(
+            "📘 Guide Tutorial: Trophy Rooms",
+            "Placeholder tutorial page for trophy room mechanics. More tutorials will be added as buttons here over time.",
+            []),
+    }
+
+    class GuideView(discord.ui.View):
+        def __init__(self, author_id):
+            super().__init__(timeout=180)
+            self.author_id = author_id
+
+        async def interaction_check(self, interaction: discord.Interaction):
+            if interaction.user.id != self.author_id:
+                await interaction.response.send_message(
+                    "❌ This guide menu isn't for you.", ephemeral=True)
+                return False
+            return True
+
+    view = GuideView(ctx.author.id)
+
+    async def show_page(interaction, page_name):
+        if page_name == "home":
+            await interaction.response.edit_message(embed=home_embed, view=view)
+        else:
+            await interaction.response.edit_message(embed=tutorial_pages[page_name], view=view)
+
+    home_button = discord.ui.Button(label="Main Guide", style=discord.ButtonStyle.primary)
+
+    async def home_callback(interaction):
+        await show_page(interaction, "home")
+
+    home_button.callback = home_callback
+    view.add_item(home_button)
+
+    for page_name in tutorial_pages:
+        button = discord.ui.Button(label=page_name, style=discord.ButtonStyle.secondary)
+
+        async def page_callback(interaction, selected_page=page_name):
+            await show_page(interaction, selected_page)
+
+        button.callback = page_callback
+        view.add_item(button)
+
+    await ctx.send(embed=home_embed, view=view)
 
 
 keep_alive()
