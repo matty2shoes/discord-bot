@@ -1943,8 +1943,8 @@ async def shop(ctx):
         bonus_percent = int(data.get("bonus", 0) * 100)
         tag = " *(Equipped)*" if name == equipped_rod else ""
         rod_lines.append(
-            f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}\n"
-            f"*+ {bonus_percent}% gold on fish sell*"
+            f"**{data['emoji']} {name.title()}** — {data['price']} <:coin:1399146146315894825>{tag}"
+            f" — *+ {bonus_percent}% gold on fish sell*"
         )
     for rod_chunk in chunk_lines_for_embed(rod_lines):
         rods_embed.add_field(
