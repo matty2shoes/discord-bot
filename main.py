@@ -1399,18 +1399,21 @@ async def adventure(ctx):
     chest_names = list(chests.keys())
     weights = [50, 20, 15, 10, 5]
 
-    chosen_name = random.choices(chest_names, weights=weights)[0]
-    chest_data = chests[chosen_name]
-    emoji = chest_data["emoji"]
     chest_amount = 2 if random.random() < 0.20 else 1
 
-    user_data["chests"][chosen_name] = user_data["chests"].get(chosen_name,
-                                                               0) + chest_amount
+    rolled_chests = random.choices(chest_names, weights=weights, k=chest_amount)
+    chest_counts = {}
+    for chest_name in rolled_chests:
+        chest_counts[chest_name] = chest_counts.get(chest_name, 0) + 1
+        user_data["chests"][chest_name] = user_data["chests"].get(chest_name, 0) + 1
+
+    rewards_text = " and ".join(
+        [f"{count}x {chests[name]['emoji']} **{name.title()}**" for name, count in chest_counts.items()]
+    )
 
     embed = discord.Embed(
         title="🗺️ Adventure Complete!",
-        description=
-        f"{ctx.author.display_name} found {chest_amount}x {emoji} **{chosen_name.title()}**!",
+        description=f"{ctx.author.display_name} found {rewards_text}!",
         color=discord.Color.orange())
     await ctx.send(embed=embed)
     save_users()
@@ -1927,11 +1930,22 @@ async def profile(ctx, member: discord.Member = None):
         inline=False
     )
 
-    # Total fish
+    # Fishing stats
     total_fish = user_data.get("total_fish", 0)
+    bait_mult = 1.0
+    if user_data.get("bait") and user_data.get("bait_uses", 0) > 0:
+        bait_name = user_data["bait"]
+        bait_mult = float(baits[bait_name]["multiplier"])
+
+    bowl_mult = get_fishbowl_multiplier(user_data)
+    combined_rare_odds_increase = (bait_mult * bowl_mult - 1.0) * 100
+
     embed.add_field(
-        name="━━ <:wooden_rod:1399044497068920912> Total Fish Caught ━━",
-        value=f"{total_fish} <:fish:1399192790797127861>",
+        name="━━ <:wooden_rod:1399044497068920912> Fishing Stats ━━",
+        value=(
+            f"Fish caught: <:fish:1399192790797127861> *{total_fish}*\n"
+            f"Total rare fish odds increase: *{combined_rare_odds_increase:.1f}%*"
+        ),
         inline=False
     )
 
