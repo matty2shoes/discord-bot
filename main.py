@@ -1058,13 +1058,13 @@ def make_contract_catalog_for_user(user_data, user_id=None):
     contract_scoring = {
         "difficulty": {
             "A": (8, 14),
-            "B": (12, 20),
-            "C": (16, 26),
+            "B": (18, 28),
+            "C": (28, 44),
         },
         "reward": {
-            "A": (4, 12),
-            "B": (6, 16),
-            "C": (8, 20),
+            "A": (6, 14),
+            "B": (12, 22),
+            "C": (18, 30),
             "max_spread_per_tier": 4,
         },
     }
@@ -1180,9 +1180,9 @@ def make_contract_catalog_for_user(user_data, user_id=None):
             "C": ["ruby chest", "diamond chest"],
         }
         treasure_drop_chance = {
-            "A": 0.40,
-            "B": 0.72,
-            "C": 0.88,
+            "A": 0.70,
+            "B": 1.00,
+            "C": 1.00,
         }
         treasure_tier_caps = {
             "A": 2,
@@ -1217,6 +1217,16 @@ def make_contract_catalog_for_user(user_data, user_id=None):
                 for treasure_name in rng.sample(tier_pool, k=min(len(tier_pool), treasure_pick_count)):
                     reward["treasures"][treasure_name] = rng.randint(1, 2)
 
+        # Keep contract rewards visibly tied to contract tier by guaranteeing
+        # at least one treasure on higher tiers.
+        if label in {"B", "C"} and not reward["treasures"]:
+            guaranteed_pool = [
+                name for name, info in treasure_index.items()
+                if int(info.get("tier", 0)) <= treasure_tier_caps[label]
+            ]
+            if guaranteed_pool:
+                reward["treasures"][rng.choice(guaranteed_pool)] = 1
+
         return reward
 
     def build_goal_for_tier(label):
@@ -1229,13 +1239,13 @@ def make_contract_catalog_for_user(user_data, user_id=None):
                 {"type": "dig_specific_bait", "bait": pick_bait(100, 250), "target": rng.randint(2, 4)},
             ],
             "B": [
-                {"type": "cast", "target": rng.randint(14, 22)},
+                {"type": "cast", "target": rng.randint(24, 38)},
                 {"type": "catch_fish", "fish": pick_fish(35, 95), "target": rng.randint(3, 7)},
                 {"type": "dig_bait", "target": rng.randint(5, 7)},
                 {"type": "dig_specific_bait", "bait": pick_bait(250, 350), "target": rng.randint(3, 6)},
             ],
             "C": [
-                {"type": "cast", "target": rng.randint(22, 34)},
+                {"type": "cast", "target": rng.randint(40, 60)},
                 {"type": "catch_fish", "fish": pick_fish(80, 1000), "target": rng.randint(4, 9)},
                 {"type": "dig_bait", "target": rng.randint(6, 10)},
                 {"type": "dig_specific_bait", "bait": pick_bait(350, 500), "target": rng.randint(4, 8)},
