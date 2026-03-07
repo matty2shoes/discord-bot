@@ -1029,7 +1029,9 @@ def make_contract_catalog_for_user(user_data):
     seed = f"{rotation.isoformat()}:{int(user_data.get('time_travels', 0))}:{user_data.get('level', 1)}"
     rng = random.Random(seed)
 
-    fish_names = [f['name'] for f in fish_pool if f['chance'] <= 7]
+    fish_names = [f['name'] for f in fish_pool if f['chance'] <= 15]
+    if not fish_names:
+        fish_names = [f['name'] for f in fish_pool]
     fish_pick = rng.choice(fish_names)
 
     def build_contract_reward(label):
@@ -1061,19 +1063,19 @@ def make_contract_catalog_for_user(user_data):
         "A": {
             "label": "A",
             "price": 500,
-            "goal": {"type": "cast", "target": rng.choice([15, 20])},
+            "goal": {"type": "cast", "target": rng.choice([8, 10, 12])},
             "reward": build_contract_reward("A"),
         },
         "B": {
             "label": "B",
             "price": 1000,
-            "goal": {"type": "dig_bait", "target": rng.randint(4, 8)},
+            "goal": {"type": "dig_bait", "target": rng.randint(3, 6)},
             "reward": build_contract_reward("B"),
         },
         "C": {
             "label": "C",
             "price": 2000,
-            "goal": {"type": "catch_fish", "fish": fish_pick, "target": rng.randint(4, 9)},
+            "goal": {"type": "catch_fish", "fish": fish_pick, "target": rng.randint(3, 6)},
             "reward": build_contract_reward("C"),
         },
     }
@@ -1986,7 +1988,6 @@ async def cast(ctx):
             user_data["inventory"][name] = user_data["inventory"].get(name, 0) + 1
             gold_earned = int(xp * (1 + gold_bonus))
 
-        update_contract_progress(user_data, "cast", 1)
         update_contract_progress(user_data, "catch_fish", 1, name)
 
         new_level, xp_into_level, next_level_xp = get_level_info(user_data["xp"])
@@ -2000,6 +2001,8 @@ async def cast(ctx):
         if has_boost(user_data, "autosell"):
             result += f"\n<:moneysack:1478545126732333187> Sold instantly for {gold_earned} <:coin:1399146146315894825> (Autosell Active)"
         results.append(result)
+
+    update_contract_progress(user_data, "cast", 1)
 
 
     if deep_sea_bonus_treasure:
