@@ -294,7 +294,7 @@ fish_pool = [{
 }, {
     "name": "mario judah",
     "emoji": "<:mario_judah:1479711689015300106>",
-    "xp": 15000,
+    "xp": 200000,
     "chance": 0.004
 }]
 
@@ -454,16 +454,16 @@ boosts = {
         "Automatically sell any fish you catch from 'sq cast' for 1 hour"
     },
     "extra love": {
-        "emoji": "💘",
+        "emoji": "<:cupid_rod:1478909535845482569>",
         "price": 500,
         "duration": 60 * 60 * 2,
-        "description": "Cupid Rod extra-fish chance from 10% to 15% for 2 hours"
+        "description": "Cupid Rod extra-fish chance from 10% → 15% for 2 hours"
     },
     "deeper casts": {
-        "emoji": "🌊",
+        "emoji": "<:deep_sea_rod:1478909563938930878>",
         "price": 750,
         "duration": 60 * 60 * 2,
-        "description": "Deep Sea Rod treasure chance 10%→15% and tier 1-3→1-4 for 2 hours"
+        "description": "Deep Sea Rod treasure chance 10%→15% and tier 1-3 → 1-4 for 2 hours"
     }
 }
 
