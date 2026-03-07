@@ -3595,7 +3595,6 @@ async def guide(ctx):
         "sq open all chest – Open every chest in your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
         "sq disable <boost> - Disable an active boost",
-        "sq use one piece – ???",
     ]
     home_embed.add_field(
         name=
