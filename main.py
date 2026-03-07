@@ -1944,7 +1944,7 @@ async def profile(ctx, member: discord.Member = None):
         name="━━ <:wooden_rod:1399044497068920912> Fishing Stats ━━",
         value=(
             f"Fish caught: <:fish:1399192790797127861> *{total_fish}*\n"
-            f"Total rare fish odds increase: *{combined_rare_odds_increase:.1f}%*"
+            f"Total rare fish odds: +*{combined_rare_odds_increase:.1f}%*"
         ),
         inline=False
     )
