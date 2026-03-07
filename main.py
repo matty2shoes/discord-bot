@@ -2633,7 +2633,7 @@ async def shop(ctx):
         if data.get("treasure_cast_chance", 0) > 0:
             treasure_cast_percent = int(data["treasure_cast_chance"] * 100)
             tier_text = "tier 1-4" if name == "deep sea rod" and has_boost(user_data, "deeper casts") else "tier 1-3"
-            abilities.append(f"{treasure_cast_percent}% chance to pull a {tier_text} treasure")
+            abilities.append(f"{treasure_cast_percent}% chance to pull a tier 1-3 treasure")
 
         ability_text = ""
         if abilities:
