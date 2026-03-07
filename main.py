@@ -1405,7 +1405,16 @@ async def send_trophy_room(ctx):
         return chunks or ["No entries yet."]
 
     def build_fish_embed():
-        lines = []
+        normal_fish_lines = []
+        specialty_fish_lines = []
+
+        specialty_fish_names = {
+            "SUPER RARE LAM CHAD FISH EXTREME",
+            "fih",
+            "nemo",
+            "mario judah",
+        }
+
         for fish in fish_pool:
             fish_name = fish["name"]
             needed = get_fish_trophy_requirement(fish_name, user_data)
@@ -1413,7 +1422,12 @@ async def send_trophy_room(ctx):
             count = max(0, min(count, needed))
             marker = "✅" if count >= needed else "⬜"
             display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
-            lines.append(f"{marker} {fish['emoji']} **{display_name}** ({count}/{needed})")
+            line = f"{marker} {fish['emoji']} **{display_name}** ({count}/{needed})"
+
+            if fish_name in specialty_fish_names:
+                specialty_fish_lines.append(line)
+            else:
+                normal_fish_lines.append(line)
 
         total_needed = sum(get_fish_trophy_requirement(f["name"], user_data) for f in fish_pool)
         total_collected = sum(min(int(fish_collected.get(f["name"], 0)), get_fish_trophy_requirement(f["name"], user_data)) for f in fish_pool)
@@ -1423,10 +1437,17 @@ async def send_trophy_room(ctx):
             description="Add fish with `sq trophy add <fish> <amount>`.",
             color=discord.Color.green() if fish_completed else discord.Color.gold()
         )
-        collection_chunks = split_embed_lines(lines)
-        for index, chunk in enumerate(collection_chunks, start=1):
-            field_name = "Collection" if len(collection_chunks) == 1 else f"Collection ({index}/{len(collection_chunks)})"
+        normal_chunks = split_embed_lines(normal_fish_lines)
+        specialty_chunks = split_embed_lines(specialty_fish_lines)
+
+        for index, chunk in enumerate(normal_chunks, start=1):
+            field_name = "Normal Fish" if len(normal_chunks) == 1 else f"Normal Fish ({index}/{len(normal_chunks)})"
             embed.add_field(name=field_name, value=chunk, inline=False)
+
+        for index, chunk in enumerate(specialty_chunks, start=1):
+            field_name = "Specialty Fish" if len(specialty_chunks) == 1 else f"Specialty Fish ({index}/{len(specialty_chunks)})"
+            embed.add_field(name=field_name, value=chunk, inline=False)
+
         embed.add_field(name="Progress", value=f"{total_collected}/{total_needed} fish placed", inline=False)
         if fish_completed:
             embed.add_field(
@@ -1437,13 +1458,14 @@ async def send_trophy_room(ctx):
         return embed
 
     def build_treasure_embed():
-        lines = []
+        tier_collections = {tier: [] for tier in range(1, 7)}
+
         for treasure_name, needed in treasure_requirements.items():
             info = treasure_index[treasure_name]
-            count = int(treasure_collected.get(treasure_name, 0))
-            count = max(0, min(count, needed))
-            marker = "✅" if count >= needed else "⬜"
-            lines.append(f"{marker} {info['emoji']} **{treasure_name.title()}** ({count}/{needed})")
+            tier = int(info.get("tier", 0))
+            if tier not in tier_collections:
+                continue
+            tier_collections[tier].append((treasure_name, info, needed))
 
         total_needed = sum(treasure_requirements.values())
         total_collected = sum(min(int(treasure_collected.get(name, 0)), needed) for name, needed in treasure_requirements.items())
@@ -1452,10 +1474,28 @@ async def send_trophy_room(ctx):
             description="Add treasures with `sq trophy add treasure <treasure> <amount>`.",
             color=discord.Color.green() if treasure_completed else discord.Color.gold(),
         )
-        collection_chunks = split_embed_lines(lines) if lines else ["No treasures configured."]
-        for index, chunk in enumerate(collection_chunks, start=1):
-            field_name = "Collection" if len(collection_chunks) == 1 else f"Collection ({index}/{len(collection_chunks)})"
-            embed.add_field(name=field_name, value=chunk, inline=False)
+        for tier in range(1, 7):
+            sorted_entries = sorted(
+                tier_collections[tier],
+                key=lambda item: (item[1].get("min_value", item[1].get("value", 0)), item[0])
+            )
+
+            if not sorted_entries:
+                embed.add_field(name=f"Tier {tier} Treasures", value="No treasures configured.", inline=False)
+                continue
+
+            tier_lines = []
+            for treasure_name, info, needed in sorted_entries:
+                count = int(treasure_collected.get(treasure_name, 0))
+                count = max(0, min(count, needed))
+                marker = "✅" if count >= needed else "⬜"
+                tier_lines.append(f"{marker} {info['emoji']} **{treasure_name.title()}** ({count}/{needed})")
+
+            tier_chunks = split_embed_lines(tier_lines)
+            for index, chunk in enumerate(tier_chunks, start=1):
+                field_name = f"Tier {tier} Treasures" if len(tier_chunks) == 1 else f"Tier {tier} Treasures ({index}/{len(tier_chunks)})"
+                embed.add_field(name=field_name, value=chunk, inline=False)
+
         embed.add_field(name="Progress", value=f"{total_collected}/{total_needed} treasures placed", inline=False)
         if treasure_completed:
             embed.add_field(
