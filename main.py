@@ -163,6 +163,47 @@ bot = commands.Bot(
     case_insensitive=True
 )
 
+bot_state_file = "bot_state.json"
+
+
+def load_bot_state():
+    if os.path.exists(bot_state_file):
+        with open(bot_state_file, "r") as f:
+            data = json.load(f)
+            lockdown = bool(data.get("lockdown", False))
+            allowed_user_id = data.get("allowed_user_id")
+            if isinstance(allowed_user_id, str) and allowed_user_id.isdigit():
+                allowed_user_id = int(allowed_user_id)
+            elif not isinstance(allowed_user_id, int):
+                allowed_user_id = None
+
+            return {"lockdown": lockdown, "allowed_user_id": allowed_user_id}
+
+    return {"lockdown": False, "allowed_user_id": None}
+
+
+def save_bot_state():
+    with open(bot_state_file, "w") as f:
+        json.dump(bot_state, f)
+
+
+bot_state = load_bot_state()
+
+
+@bot.check
+async def lockdown_guard(ctx):
+    if not bot_state.get("lockdown"):
+        return True
+
+    if ctx.author.id == bot_state.get("allowed_user_id"):
+        return True
+
+    if await bot.is_owner(ctx.author):
+        return True
+
+    await ctx.send("🔒 Bot is in private testing mode right now.")
+    return False
+
 users_file = "users.json"
 
 fish_pool = [{
@@ -3109,6 +3150,24 @@ async def clear_all_stats(ctx):
     await ctx.send("✅ All user stats cleared.")
 
 
+@bot.command(name="down")
+@commands.is_owner()
+async def down(ctx):
+    bot_state["lockdown"] = True
+    bot_state["allowed_user_id"] = ctx.author.id
+    save_bot_state()
+    await ctx.send("🔒 Private testing mode enabled. Only you can use commands now.")
+
+
+@bot.command(name="up")
+@commands.is_owner()
+async def up(ctx):
+    bot_state["lockdown"] = False
+    bot_state["allowed_user_id"] = None
+    save_bot_state()
+    await ctx.send("🔓 Private testing mode disabled. Everyone can use commands now.")
+
+
 @bot.command(aliases=["i", "inv"])
 async def inventory(ctx, member: discord.Member = None):
     if member is None:
@@ -3439,6 +3498,15 @@ async def guide(ctx):
         view.add_item(button)
 
     await ctx.send(embed=home_embed, view=view)
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.NotOwner):
+        await ctx.send("❌ Only the bot owner can use this command.")
+        return
+
+    raise error
 
 
 keep_alive()
