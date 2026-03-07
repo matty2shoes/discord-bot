@@ -1051,6 +1051,44 @@ def make_contract_catalog_for_user(user_data):
             pool = bait_by_price
         return rng.choice(pool)
 
+    def estimate_contract_reward_value(reward):
+        total = 0.0
+
+        for chest_name, amount in reward.get("chests", {}).items():
+            chest = chests.get(chest_name, {})
+            rewards_cfg = chest.get("rewards", {})
+            gold_min, gold_max = rewards_cfg.get("gold", (0, 0))
+            xp_min, xp_max = rewards_cfg.get("xp", (0, 0))
+
+            chest_value = ((gold_min + gold_max) / 2) + ((xp_min + xp_max) / 2)
+
+            treasure_cfg = rewards_cfg.get("treasures")
+            if treasure_cfg:
+                min_count, max_count = treasure_cfg.get("count", (0, 0))
+                avg_count = (min_count + max_count) / 2
+                max_tier = int(treasure_cfg.get("max_tier", 0))
+                possible_values = []
+                for info in treasure_index.values():
+                    if int(info.get("tier", 0)) <= max_tier:
+                        min_value = int(info.get("min_value", info.get("value", 0)))
+                        max_value = int(info.get("max_value", min_value))
+                        possible_values.append((min_value + max_value) / 2)
+                if possible_values:
+                    chest_value += avg_count * (sum(possible_values) / len(possible_values))
+
+            total += chest_value * int(amount)
+
+        for bait_name, amount in reward.get("baits", {}).items():
+            total += int(baits.get(bait_name, {}).get("price", 0)) * int(amount)
+
+        for treasure_name, amount in reward.get("treasures", {}).items():
+            info = treasure_index.get(treasure_name, {})
+            min_value = int(info.get("min_value", info.get("value", 0)))
+            max_value = int(info.get("max_value", min_value))
+            total += ((min_value + max_value) / 2) * int(amount)
+
+        return total
+
     def build_contract_reward(label):
         chest_options = {
             "A": ["chest", "silver chest"],
@@ -1100,14 +1138,45 @@ def make_contract_catalog_for_user(user_data):
         }
         return rng.choice(options[label])
 
-    templates = {}
-    for label, price in (("A", 500), ("B", 1000), ("C", 2000)):
-        templates[label] = {
-            "label": label,
-            "price": price,
-            "goal": build_goal_for_tier(label),
-            "reward": build_contract_reward(label),
-        }
+    templates = {
+        "A": {
+            "label": "A",
+            "price": 500,
+            "goal": build_goal_for_tier("A"),
+            "reward": build_contract_reward("A"),
+        },
+        "B": {
+            "label": "B",
+            "price": 1000,
+            "goal": build_goal_for_tier("B"),
+            "reward": build_contract_reward("B"),
+        },
+        "C": {
+            "label": "C",
+            "price": 2000,
+            "goal": build_goal_for_tier("C"),
+            "reward": build_contract_reward("C"),
+        },
+    }
+
+    # Keep reward progression monotonic so lower contracts can never out-reward higher ones.
+    # We only reroll rewards; goals and prices stay fixed for the rotation.
+    for _ in range(100):
+        a_value = estimate_contract_reward_value(templates["A"]["reward"])
+        b_value = estimate_contract_reward_value(templates["B"]["reward"])
+        c_value = estimate_contract_reward_value(templates["C"]["reward"])
+
+        rerolled = False
+        if a_value > b_value:
+            templates["A"]["reward"] = build_contract_reward("A")
+            rerolled = True
+        if b_value > c_value:
+            templates["B"]["reward"] = build_contract_reward("B")
+            rerolled = True
+
+        if not rerolled:
+            break
+
     return rotation.timestamp(), templates
 
 
