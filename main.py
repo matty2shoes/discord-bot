@@ -2709,6 +2709,19 @@ async def buy(ctx, *, item: str):
 
     # ── BOOSTS ──
     if item_name in boosts:
+        required_rod_for_boost = {
+            "extra love": "cupid rod",
+            "deeper casts": "deep sea rod",
+        }
+        required_rod = required_rod_for_boost.get(item_name)
+        equipped_rod = user_data.get("rod", "wooden rod")
+
+        if required_rod and equipped_rod != required_rod:
+            await ctx.send(
+                f"❌ You can only buy **{item_name.title()}** while **{required_rod.title()}** is equipped."
+            )
+            return
+
         boost = boosts[item_name]
         cost = boost["price"] * qty
 
@@ -3150,7 +3163,7 @@ async def contracts_cmd(ctx):
     last_bought = float(user_data.get("contracts_meta", {}).get("last_bought", 0))
     can_buy_in = max(0, (last_bought + 4 * 3600) - now)
 
-    lines = []
+    contract_lines = []
     for key in ["A", "B", "C"]:
         c = catalog[key]
         goal = c["goal"]
@@ -3164,18 +3177,33 @@ async def contracts_cmd(ctx):
             goal_text = f"Catch {goal['target']} {fish_txt}"
         else:
             goal_text = "Unknown"
-        lines.append(
-            f"**{key}.** {c['price']} <:coin:1399146146315894825> — {goal_text} — Reward: {format_contract_reward(c.get('reward', {}))}"
+        contract_lines.append(
+            f"**{key}.** {c['price']} <:coin:1399146146315894825>\n"
+            f"Goal: {goal_text}\n"
+            f"Reward: {format_contract_reward(c.get('reward', {}))}"
         )
 
     if user_data.get("contract"):
         active = user_data["contract"]
-        active_line = f"Active: {active['label']} ({active['progress']}/{active['goal']['target']}) — {format_duration(active['expires_at']-now)} left"
+        time_left = max(0, active['expires_at'] - now)
+        active_line = (
+            f"**{active['label']}** ({active['progress']}/{active['goal']['target']})\n"
+            f"Expires in {format_duration(time_left)}"
+        )
     else:
-        active_line = "Active: None"
+        active_line = "None"
 
     cd_line = "Ready to buy a contract" if can_buy_in <= 0 else f"Next purchase in {format_duration(can_buy_in)}"
-    await ctx.send("\n".join(["📜 **Faction Contracts**", *lines, "", active_line, cd_line]))
+
+    embed = discord.Embed(
+        title="📜 Faction Contracts",
+        description="Buy one contract every 4 hours. Each contract expires in 1 hour.",
+        color=discord.Color.dark_red()
+    )
+    embed.add_field(name="Available Contracts", value="\n\n".join(contract_lines), inline=False)
+    embed.add_field(name="Active Contract", value=active_line, inline=False)
+    embed.add_field(name="Purchase Cooldown", value=cd_line, inline=False)
+    await ctx.send(embed=embed)
 
 
 @bot.group(name="contract", invoke_without_command=True)
