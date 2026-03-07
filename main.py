@@ -1179,6 +1179,21 @@ def make_contract_catalog_for_user(user_data, user_id=None):
             "B": ["silver chest", "ruby chest"],
             "C": ["ruby chest", "diamond chest"],
         }
+        treasure_drop_chance = {
+            "A": 0.40,
+            "B": 0.72,
+            "C": 0.88,
+        }
+        treasure_tier_caps = {
+            "A": 2,
+            "B": 3,
+            "C": 4,
+        }
+        treasure_count_ranges = {
+            "A": (1, 2),
+            "B": (1, 3),
+            "C": (2, 4),
+        }
         reward = {
             "chests": {rng.choice(chest_options[label]): 1},
             "baits": {},
@@ -1190,10 +1205,16 @@ def make_contract_catalog_for_user(user_data, user_id=None):
             for bait_name in rng.sample(bait_pool, k=rng.randint(1, 2)):
                 reward["baits"][bait_name] = rng.randint(1, 3)
 
-        if rng.random() < 0.40:
-            tier12 = [name for name, info in treasure_index.items() if int(info.get("tier", 0)) <= 2]
-            if tier12:
-                for treasure_name in rng.sample(tier12, k=min(len(tier12), rng.randint(1, 2))):
+        if rng.random() < treasure_drop_chance[label]:
+            max_tier = treasure_tier_caps[label]
+            tier_pool = [
+                name for name, info in treasure_index.items()
+                if int(info.get("tier", 0)) <= max_tier
+            ]
+            if tier_pool:
+                min_count, max_count = treasure_count_ranges[label]
+                treasure_pick_count = rng.randint(min_count, max_count)
+                for treasure_name in rng.sample(tier_pool, k=min(len(tier_pool), treasure_pick_count)):
                     reward["treasures"][treasure_name] = rng.randint(1, 2)
 
         return reward
