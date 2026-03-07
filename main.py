@@ -3311,13 +3311,21 @@ async def treasure_list_index(ctx):
     )
 
     lines = []
+    one_piece_line = None
     for name, data in sorted_treasures:
+        if name == "the one piece":
+            one_piece_line = f"{data['emoji']} The One Piece"
+            continue
+
         min_value = int(data.get("min_value", data.get("value", 0)))
         max_value = int(data.get("max_value", min_value))
         value_text = f"{min_value}-{max_value}" if max_value != min_value else f"{min_value}"
         lines.append(
             f"{data['emoji']} **{name.title()}** — {value_text} <:coin:1399146146315894825>"
         )
+
+    if one_piece_line:
+        lines.append(one_piece_line)
 
     embed = discord.Embed(
         title="Treasure Index",
