@@ -3362,7 +3362,7 @@ async def chest_index(ctx):
             previous_max_tier = max_tier
         extra_text = ""
         if name == "deep sea chest":
-            extra_text = "\n**Special:** 1% chance for <:one_piece:1479927612104249569> The One Piece"
+            extra_text = "\n**Special:** <:one_piece:1479927612104249569> The One Piece"
 
         lines.append(
             f"{emoji} __**{name.title()}**__\n"
