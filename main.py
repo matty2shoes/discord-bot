@@ -1077,21 +1077,18 @@ def make_contract_catalog_for_user(user_data):
                 {"type": "catch_fish", "fish": pick_fish(1, 45), "target": rng.randint(2, 5)},
                 {"type": "dig_bait", "target": rng.randint(3, 6)},
                 {"type": "dig_specific_bait", "bait": pick_bait(100, 250), "target": rng.randint(2, 4)},
-                {"type": "gain_xp", "target": rng.randint(120, 220)},
             ],
             "B": [
                 {"type": "cast", "target": rng.randint(14, 22)},
                 {"type": "catch_fish", "fish": pick_fish(35, 95), "target": rng.randint(3, 7)},
                 {"type": "dig_bait", "target": rng.randint(6, 10)},
                 {"type": "dig_specific_bait", "bait": pick_bait(250, 350), "target": rng.randint(3, 6)},
-                {"type": "gain_xp", "target": rng.randint(260, 420)},
             ],
             "C": [
                 {"type": "cast", "target": rng.randint(22, 34)},
                 {"type": "catch_fish", "fish": pick_fish(80, 1000), "target": rng.randint(4, 9)},
                 {"type": "dig_bait", "target": rng.randint(10, 16)},
                 {"type": "dig_specific_bait", "bait": pick_bait(350, 500), "target": rng.randint(4, 8)},
-                {"type": "gain_xp", "target": rng.randint(500, 800)},
             ],
         }
         return rng.choice(options[label])
@@ -1123,8 +1120,6 @@ def format_contract_goal(goal):
         return f"Catch {goal['target']} {fish_txt}"
     if goal_type == "sell_treasure":
         return f"Sell {goal['target']} treasures"
-    if goal_type == "gain_xp":
-        return f"Gain {goal['target']} XP"
     return "Unknown"
 
 
@@ -1170,8 +1165,6 @@ def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
     elif goal.get("type") == "sell_treasure" and event_type == "sell_treasure":
         progress += amount
     elif goal.get("type") == "catch_fish" and event_type == "catch_fish" and fish_name == goal.get("fish"):
-        progress += amount
-    elif goal.get("type") == "gain_xp" and event_type == "gain_xp":
         progress += amount
     else:
         return None
