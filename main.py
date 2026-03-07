@@ -1022,11 +1022,15 @@ def has_boost(user_data, boost_name):
             return False
     return False
 
-def make_contract_catalog_for_user(user_data):
+def make_contract_catalog_for_user(user_data, user_id=None):
     now_est = datetime.now(ZoneInfo("America/New_York"))
     slot_hour = (now_est.hour // 6) * 6
     rotation = now_est.replace(hour=slot_hour, minute=0, second=0, microsecond=0)
-    seed = f"{rotation.isoformat()}:{int(user_data.get('time_travels', 0))}:{user_data.get('level', 1)}"
+    user_seed_id = str(user_id if user_id is not None else user_data.get("user_id", "anon"))
+    seed = (
+        f"{rotation.isoformat()}:{user_seed_id}:"
+        f"{int(user_data.get('time_travels', 0))}:{user_data.get('level', 1)}"
+    )
     rng = random.Random(seed)
 
     fish_by_xp = sorted(fish_pool, key=lambda f: int(f.get("xp", 0)))
@@ -1058,9 +1062,9 @@ def make_contract_catalog_for_user(user_data):
             "C": (16, 26),
         },
         "reward": {
-            "A": (7, 12),
-            "B": (10, 16),
-            "C": (13, 20),
+            "A": (4, 12),
+            "B": (6, 16),
+            "C": (8, 20),
             "max_spread_per_tier": 4,
         },
     }
@@ -3493,7 +3497,7 @@ async def time_travel_sub(ctx):
 @bot.command(name="contracts")
 async def contracts_cmd(ctx):
     user_data = get_user_data(ctx.author)
-    rotation_ts, catalog = make_contract_catalog_for_user(user_data)
+    rotation_ts, catalog = make_contract_catalog_for_user(user_data, ctx.author.id)
     now = time.time()
 
     last_bought = float(user_data.get("contracts_meta", {}).get("last_bought", 0))
@@ -3557,7 +3561,7 @@ async def contract_accept(ctx, contract_letter: str):
         await ctx.send("❌ Finish your current contract first.")
         return
 
-    _, catalog = make_contract_catalog_for_user(user_data)
+    _, catalog = make_contract_catalog_for_user(user_data, ctx.author.id)
     picked = catalog[letter]
     price = int(picked["price"])
     if int(user_data.get("gold", 0)) < price:
