@@ -1030,12 +1030,19 @@ def make_contract_catalog_for_user(user_data):
     rng = random.Random(seed)
 
     fish_by_xp = sorted(fish_pool, key=lambda f: int(f.get("xp", 0)))
+    slamuel_sunny = next((f for f in fish_pool if f.get("name") == "slamuel sunny"), None)
+    max_contract_rarity = float(slamuel_sunny.get("chance", 0)) if slamuel_sunny else 0.0
     bait_by_price = sorted(baits.keys(), key=lambda name: int(baits[name].get("price", 0)))
 
     def pick_fish(min_xp, max_xp):
-        pool = [f["name"] for f in fish_by_xp if min_xp <= int(f.get("xp", 0)) <= max_xp]
+        pool = [
+            f["name"]
+            for f in fish_by_xp
+            if min_xp <= int(f.get("xp", 0)) <= max_xp
+            and float(f.get("chance", 0)) >= max_contract_rarity
+        ]
         if not pool:
-            pool = [f["name"] for f in fish_by_xp]
+            pool = [f["name"] for f in fish_by_xp if float(f.get("chance", 0)) >= max_contract_rarity]
         return rng.choice(pool)
 
     def pick_bait(min_price, max_price):
