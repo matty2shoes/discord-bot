@@ -189,7 +189,7 @@ fish_pool = [{
     "xp": 60,
     "chance": 4.526
 }, {
-    "name": "Star-Fishman",
+    "name": "star-fishman",
     "emoji": "<:star_fishman:1478913913805340883>",
     "xp": 60,
     "chance": 4.526
@@ -256,7 +256,7 @@ TROPHY_REQUIREMENTS = {
     "bebeto bass": 10,
     "superman shark": 10,
     "benjafish": 10,
-    "Star-Fishman": 10,
+    "star-fishman": 10,
     "puffer sid": 10,
     "sussy fish": 10,
     "slamuel sunny": 10,
