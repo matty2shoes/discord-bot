@@ -2435,6 +2435,7 @@ async def profile(ctx, member: discord.Member = None):
         title=f"{member.display_name}'s Profile{suffix}",
         color=discord.Color.blue()
     )
+    embed.description = f"Time Travels: **{int(user_data.get('time_travels', 0))}**"
 
     # ✅ Always safe avatar (discord.py v2+)
     embed.set_thumbnail(url=member.display_avatar.url)
@@ -2489,7 +2490,7 @@ async def profile(ctx, member: discord.Member = None):
         name="━━ <:wooden_rod:1399044497068920912> Fishing Stats ━━",
         value=(
             f"Fish caught: <:fish:1399192790797127861> *{total_fish}*\n"
-            f"Total rare fish odds: +*{combined_rare_odds_increase:.1f}%*\nTime Travels: **{int(user_data.get('time_travels', 0))}**"
+            f"Total rare fish odds: +*{combined_rare_odds_increase:.1f}%*"
         ),
         inline=False
     )
