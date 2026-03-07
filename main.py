@@ -1921,7 +1921,7 @@ async def profile(ctx, member: discord.Member = None):
     if rod_data.get("double_cast_chance", 0) > 0:
         abilities.append(f"{int(rod_data['double_cast_chance'] * 100)}% chance for an extra fish")
     if rod_data.get("treasure_cast_chance", 0) > 0:
-        abilities.append(f"{int(rod_data['treasure_cast_chance'] * 100)}% chance to pull a tier 1-4 treasure")
+        abilities.append(f"{int(rod_data['treasure_cast_chance'] * 100)}% chance to pull a tier 1-3 treasure")
     ability_text = f"\n*Ability: {' | '.join(abilities)}*" if abilities else ""
 
     embed.add_field(
@@ -1995,7 +1995,7 @@ async def shop(ctx):
 
         if data.get("treasure_cast_chance", 0) > 0:
             treasure_cast_percent = int(data["treasure_cast_chance"] * 100)
-            abilities.append(f"{treasure_cast_percent}% chance to pull a tier 1-4 treasure")
+            abilities.append(f"{treasure_cast_percent}% chance to pull a tier 1-3 treasure")
 
         ability_text = ""
         if abilities:
