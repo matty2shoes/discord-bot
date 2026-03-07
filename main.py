@@ -1144,8 +1144,7 @@ def format_contract_reward(reward):
 
     for treasure_name, amount in reward.get("treasures", {}).items():
         emoji = treasure_index.get(treasure_name, {}).get("emoji", "")
-        label = treasure_name.title() if amount == 1 else f"{treasure_name.title()} x{amount}"
-        parts.append(f"{emoji} {label}")
+        parts.append(f"{emoji} {amount} {treasure_name.title()}")
 
     return " + ".join(parts) if parts else "No reward"
 
