@@ -2238,18 +2238,26 @@ async def open_chest(ctx, *, args: str):
         level_up_text = f"\n🎉 You leveled up to **Level {new_level}**!"
         user_data["level"] = new_level
 
+    opened_line = f"{ctx.author.display_name} opened {to_open} {chest_name.title()}{'s' if to_open > 1 else ''}!"
+
     embed = discord.Embed(
-        title=
-        f"{emoji} {ctx.author.display_name} opened {to_open} {chest_name.title()}{'s' if to_open > 1 else ''}!",
+        title=f"{emoji} {opened_line}",
         color=discord.Color.gold())
 
     lines = []
+    lines.append(opened_line)
+
+    if chest_name == "deep sea chest" and ONE_PIECE_NAME in found_treasures:
+        lines.append("**YOU FOUND THE ONE PIECE!!**")
+
     if found_treasures:
         treasure_lines = [
             f"{treasure_index[t]['emoji']} **{t.title()}**"
             for t in found_treasures
         ]
         lines.extend(treasure_lines)
+
+    lines.append("")
 
     lines.append(f"<:coin:1399146146315894825> Gold: +{total_gold}")
     lines.append("")
