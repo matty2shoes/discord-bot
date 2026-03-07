@@ -3045,7 +3045,7 @@ async def sq_bait(ctx, *, bait_name: str):
 
     # if no active uses (first equip or after swap), roll uses
     if user_data.get("bait_uses", 0) <= 0:
-        user_data["bait_uses"] = random.randint(4, 7)
+        user_data["bait_uses"] = random.randint(5, 8)
 
     save_users()
 
