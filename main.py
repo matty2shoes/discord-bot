@@ -959,27 +959,74 @@ def make_contract_catalog_for_user(user_data):
     fish_names = [f['name'] for f in fish_pool if f['chance'] <= 7]
     fish_pick = rng.choice(fish_names)
 
+    def build_contract_reward(label):
+        chest_options = {
+            "A": ["chest", "silver chest"],
+            "B": ["silver chest", "ruby chest"],
+            "C": ["ruby chest", "diamond chest"],
+        }
+        reward = {
+            "chests": {rng.choice(chest_options[label]): 1},
+            "baits": {},
+            "treasures": {},
+        }
+
+        if rng.random() < 0.45:
+            bait_pool = list(baits.keys())
+            for bait_name in rng.sample(bait_pool, k=rng.randint(1, 2)):
+                reward["baits"][bait_name] = rng.randint(1, 3)
+
+        if rng.random() < 0.40:
+            tier12 = [name for name, info in treasure_index.items() if int(info.get("tier", 0)) <= 2]
+            if tier12:
+                for treasure_name in rng.sample(tier12, k=min(len(tier12), rng.randint(1, 2))):
+                    reward["treasures"][treasure_name] = rng.randint(1, 2)
+
+        return reward
+
     templates = {
         "A": {
             "label": "A",
             "price": 500,
             "goal": {"type": "cast", "target": rng.choice([15, 20])},
-            "reward_gold": rng.randint(350, 850),
+            "reward": build_contract_reward("A"),
         },
         "B": {
             "label": "B",
             "price": 1000,
             "goal": {"type": "dig_bait", "target": rng.randint(4, 8)},
-            "reward_gold": rng.randint(900, 1700),
+            "reward": build_contract_reward("B"),
         },
         "C": {
             "label": "C",
             "price": 2000,
             "goal": {"type": "catch_fish", "fish": fish_pick, "target": rng.randint(4, 9)},
-            "reward_gold": rng.randint(1400, 3000),
+            "reward": build_contract_reward("C"),
         },
     }
     return rotation.timestamp(), templates
+
+
+def format_contract_reward(reward):
+    if not reward:
+        return "No reward"
+
+    parts = []
+
+    for chest_name, amount in reward.get("chests", {}).items():
+        emoji = chests.get(chest_name, {}).get("emoji", "")
+        parts.append(f"{emoji} {amount} {chest_name.title()}")
+
+    for bait_name, amount in reward.get("baits", {}).items():
+        emoji = baits.get(bait_name, {}).get("emoji", "")
+        parts.append(f"{emoji} {amount} {format_bait_name(bait_name, amount)}")
+
+    for treasure_name, amount in reward.get("treasures", {}).items():
+        emoji = treasure_index.get(treasure_name, {}).get("emoji", "")
+        label = treasure_name.title() if amount == 1 else f"{treasure_name.title()} x{amount}"
+        parts.append(f"{emoji} {label}")
+
+    return " + ".join(parts) if parts else "No reward"
 
 
 def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
@@ -1007,8 +1054,24 @@ def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
 
     contract["progress"] = progress
     if progress >= int(goal.get("target", 1)):
-        reward = int(contract.get("reward_gold", 0))
-        user_data["gold"] = int(user_data.get("gold", 0)) + reward
+        reward = contract.get("reward", {})
+
+        for chest_name, amount in reward.get("chests", {}).items():
+            user_data.setdefault("chests", {})[chest_name] = int(user_data.setdefault("chests", {}).get(chest_name, 0)) + int(amount)
+
+        inventory = user_data.setdefault("inventory", {})
+        for bait_name, amount in reward.get("baits", {}).items():
+            inventory[bait_name] = int(inventory.get(bait_name, 0)) + int(amount)
+
+        treasures = user_data.setdefault("treasures", {})
+        for treasure_name, amount in reward.get("treasures", {}).items():
+            treasures[treasure_name] = int(treasures.get(treasure_name, 0)) + int(amount)
+
+        # Backward compatibility for contracts accepted before this update.
+        reward_gold = int(contract.get("reward_gold", 0))
+        if reward_gold > 0:
+            user_data["gold"] = int(user_data.get("gold", 0)) + reward_gold
+
         user_data["contract"] = None
 
 
@@ -2940,7 +3003,9 @@ async def contracts_cmd(ctx):
             goal_text = f"Catch {goal['target']} {fish_txt}"
         else:
             goal_text = "Unknown"
-        lines.append(f"**{key}.** {c['price']} <:coin:1399146146315894825> — {goal_text} — Reward: {c['reward_gold']} gold")
+        lines.append(
+            f"**{key}.** {c['price']} <:coin:1399146146315894825> — {goal_text} — Reward: {format_contract_reward(c.get('reward', {}))}"
+        )
 
     if user_data.get("contract"):
         active = user_data["contract"]
@@ -2988,7 +3053,7 @@ async def contract_accept(ctx, contract_letter: str):
         "label": letter,
         "goal": picked["goal"],
         "progress": 0,
-        "reward_gold": picked["reward_gold"],
+        "reward": picked.get("reward", {}),
         "expires_at": now + 3600,
     }
     meta["last_bought"] = now
