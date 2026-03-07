@@ -329,7 +329,7 @@ rods = {
         "emoji": "<:cupid_rod:1478909535845482569>",
         "price": 70000,
         "bonus": 2.00,
-        "double_cast_chance": 0.15,
+        "double_cast_chance": 0.10,
     },
     "deep sea rod": {
         "emoji": "<:deep_sea_rod:1478909563938930878>",
