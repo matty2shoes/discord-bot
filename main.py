@@ -1338,6 +1338,12 @@ async def trophy_room_view(ctx):
     await send_trophy_room(ctx)
 
 
+@bot.command(name="trophyroom", aliases=["trroom", "trophy-room"])
+async def trophy_room_direct(ctx):
+    """Fallback direct command in case grouped subcommands fail to route."""
+    await send_trophy_room(ctx)
+
+
 def get_fish_trophy_requirement(fish_name, user_data):
     base_amount = int(TROPHY_REQUIREMENTS.get(fish_name, 1))
     increment = int(FISH_TROPHY_INCREMENT_PER_TT.get(fish_name, 0))
@@ -3306,7 +3312,11 @@ async def fish_index(ctx, *, mode: str = None):
 @bot.command(aliases=["ti", "treasureindex"])
 async def treasure_list_index(ctx):
     sorted_treasures = sorted(
-        treasure_index.items(),
+        (
+            (name, data)
+            for name, data in treasure_index.items()
+            if name != ONE_PIECE_NAME
+        ),
         key=lambda item: (item[1].get("min_value", item[1].get("value", 0)), item[0])
     )
 
@@ -3416,7 +3426,7 @@ async def guide(ctx):
         "sq p / sq profile – View profile",
         "sq i / sq inventory – View Inventory",
         "sq fish bowl – View fish bowl guide for details!",
-        "sq tr / sq trophy / sq trophy room – View your trophy room fish collection",
+        "sq tr / sq trophy / sq trophy room / sq trophyroom – View your trophy room fish collection",
         "sq trophy room – View trophy room guide for details!",
         "sq shop – Where you can buy rods, boosts, and more",
         "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
