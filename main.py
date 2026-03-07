@@ -2458,6 +2458,11 @@ async def cooldown_check(ctx):
     if user_id in dig_cooldowns and now - dig_cooldowns[user_id] < 600:
         dig_remaining = 600 - (now - dig_cooldowns[user_id])
 
+    contract_buy_remaining = max(
+        0,
+        (float(user_data.get("contracts_meta", {}).get("last_bought", 0)) + 4 * 3600) - now,
+    )
+
     active_boosts = []
     emoji_map = {
         "double cast": "<:double_cast:1399044646700716154>",
@@ -2491,6 +2496,7 @@ async def cooldown_check(ctx):
         f"{'✅ -- Dig' if dig_remaining == 0 else f'🕓 -- Dig ({format_duration(dig_remaining)})'}",
         f"{'✅ -- Net' if net_remaining == 0 else f'🕓 -- Net ({format_duration(net_remaining)})'}",
         f"{'✅ -- Adventure' if adventure_remaining == 0 else f'🕓 -- Adventure ({format_duration(adventure_remaining)})'}",
+        f"{'✅ -- Buy Contract' if contract_buy_remaining == 0 else f'🕓 -- Buy Contract ({format_duration(contract_buy_remaining)})'}",
     ]
 
     embed = discord.Embed(title="━━━━ Cooldown Check ━━━━",
