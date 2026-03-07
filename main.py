@@ -1384,6 +1384,26 @@ async def send_trophy_room(ctx):
 
     save_users()
 
+    def split_embed_lines(lines, max_length=1024):
+        chunks = []
+        current = []
+        current_length = 0
+
+        for line in lines:
+            line_length = len(line) + (1 if current else 0)
+            if current and current_length + line_length > max_length:
+                chunks.append("\n".join(current))
+                current = [line]
+                current_length = len(line)
+            else:
+                current.append(line)
+                current_length += line_length
+
+        if current:
+            chunks.append("\n".join(current))
+
+        return chunks or ["No entries yet."]
+
     def build_fish_embed():
         lines = []
         for fish in fish_pool:
@@ -1403,7 +1423,10 @@ async def send_trophy_room(ctx):
             description="Add fish with `sq trophy add <fish> <amount>`.",
             color=discord.Color.green() if fish_completed else discord.Color.gold()
         )
-        embed.add_field(name="Collection", value="\n".join(lines), inline=False)
+        collection_chunks = split_embed_lines(lines)
+        for index, chunk in enumerate(collection_chunks, start=1):
+            field_name = "Collection" if len(collection_chunks) == 1 else f"Collection ({index}/{len(collection_chunks)})"
+            embed.add_field(name=field_name, value=chunk, inline=False)
         embed.add_field(name="Progress", value=f"{total_collected}/{total_needed} fish placed", inline=False)
         if fish_completed:
             embed.add_field(
@@ -1429,7 +1452,10 @@ async def send_trophy_room(ctx):
             description="Add treasures with `sq trophy add treasure <treasure> <amount>`.",
             color=discord.Color.green() if treasure_completed else discord.Color.gold(),
         )
-        embed.add_field(name="Collection", value="\n".join(lines) if lines else "No treasures configured.", inline=False)
+        collection_chunks = split_embed_lines(lines) if lines else ["No treasures configured."]
+        for index, chunk in enumerate(collection_chunks, start=1):
+            field_name = "Collection" if len(collection_chunks) == 1 else f"Collection ({index}/{len(collection_chunks)})"
+            embed.add_field(name=field_name, value=chunk, inline=False)
         embed.add_field(name="Progress", value=f"{total_collected}/{total_needed} treasures placed", inline=False)
         if treasure_completed:
             embed.add_field(
