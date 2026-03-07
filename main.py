@@ -613,7 +613,7 @@ treasure_index = {
         "tier": 6
     },
     "the one piece": {
-        "emoji": "<:one_piece:1479886286713131089>",
+        "emoji": "<:one_piece:1479927612104249569>",
         "min_value": 1,
         "max_value": 1,
         "tier": 7,
@@ -3311,21 +3311,13 @@ async def treasure_list_index(ctx):
     )
 
     lines = []
-    one_piece_line = None
     for name, data in sorted_treasures:
-        if name == "the one piece":
-            one_piece_line = f"{data['emoji']} The One Piece"
-            continue
-
         min_value = int(data.get("min_value", data.get("value", 0)))
         max_value = int(data.get("max_value", min_value))
         value_text = f"{min_value}-{max_value}" if max_value != min_value else f"{min_value}"
         lines.append(
             f"{data['emoji']} **{name.title()}** — {value_text} <:coin:1399146146315894825>"
         )
-
-    if one_piece_line:
-        lines.append(one_piece_line)
 
     embed = discord.Embed(
         title="Treasure Index",
@@ -3370,7 +3362,7 @@ async def chest_index(ctx):
             previous_max_tier = max_tier
         extra_text = ""
         if name == "deep sea chest":
-            extra_text = "\n**Special:** 1% chance for <:one_piece:1479886286713131089> The One Piece"
+            extra_text = "\n**Special:** 1% chance for <:one_piece:1479927612104249569> The One Piece"
 
         lines.append(
             f"{emoji} __**{name.title()}**__\n"
