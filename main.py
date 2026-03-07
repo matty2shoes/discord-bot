@@ -4,7 +4,6 @@ import random
 import time
 import os
 import json
-import math
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
@@ -297,6 +296,39 @@ MASTER_TREASURE_SEEKER_ALIAS = "Master Treasure Seeker"
 ONE_PIECE_NAME = "the one piece"
 
 EXCLUDED_TROPHY_TREASURES = {ONE_PIECE_NAME}
+
+TIME_TRAVEL_BASE_COST = 100000
+TIME_TRAVEL_COST_STEP = 25000
+
+FISH_TROPHY_INCREMENT_PER_TT = {
+    "fish": 250,
+    "chad fish": 10,
+    "bebeto bass": 10,
+    "superman shark": 10,
+    "benjafish": 10,
+    "star-fishman": 10,
+    "puffer sid": 10,
+    "sussy fish": 10,
+    "slamuel sunny": 10,
+    "nateinator": 10,
+    "kermit lefish": 10,
+    "mojicuslitus": 10,
+    "bunnie hatchling": 10,
+    "sushi fish": 10,
+    "SUPER RARE LAM CHAD FISH EXTREME": 1,
+    "fih": 1,
+    "nemo": 1,
+    "mario judah": 1,
+}
+
+TREASURE_TROPHY_REQUIREMENTS_BY_TIER = {
+    1: 10,
+    2: 10,
+    3: 5,
+    4: 5,
+    5: 1,
+    6: 1,
+}
 
 rods = {
     "wooden rod": {
@@ -1265,8 +1297,11 @@ async def trophy_room_view(ctx):
     await send_trophy_room(ctx)
 
 
-def get_scaled_trophy_requirement(base_amount, user_data):
-    return int(math.ceil(base_amount * (1 + 0.1 * int(user_data.get("time_travels", 0)))))
+def get_fish_trophy_requirement(fish_name, user_data):
+    base_amount = int(TROPHY_REQUIREMENTS.get(fish_name, 1))
+    increment = int(FISH_TROPHY_INCREMENT_PER_TT.get(fish_name, 0))
+    time_travels = int(user_data.get("time_travels", 0))
+    return base_amount + (increment * time_travels)
 
 
 def get_treasure_trophy_requirements(user_data):
@@ -1274,7 +1309,8 @@ def get_treasure_trophy_requirements(user_data):
     for name, info in treasure_index.items():
         if name in EXCLUDED_TROPHY_TREASURES:
             continue
-        req[name] = get_scaled_trophy_requirement(1, user_data)
+        tier = int(info.get("tier", 0))
+        req[name] = int(TREASURE_TROPHY_REQUIREMENTS_BY_TIER.get(tier, 1))
     return req
 
 
@@ -1284,7 +1320,7 @@ async def send_trophy_room(ctx):
     treasure_collected = normalize_treasure_trophy_room(user_data)
 
     fish_completed = all(
-        int(fish_collected.get(f["name"], 0)) >= get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data)
+        int(fish_collected.get(f["name"], 0)) >= get_fish_trophy_requirement(f["name"], user_data)
         for f in fish_pool
     )
     if fish_completed:
@@ -1305,15 +1341,15 @@ async def send_trophy_room(ctx):
         lines = []
         for fish in fish_pool:
             fish_name = fish["name"]
-            needed = get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(fish_name, 1), user_data)
+            needed = get_fish_trophy_requirement(fish_name, user_data)
             count = int(fish_collected.get(fish_name, 0))
             count = max(0, min(count, needed))
             marker = "✅" if count >= needed else "⬜"
             display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
             lines.append(f"{marker} {fish['emoji']} **{display_name}** ({count}/{needed})")
 
-        total_needed = sum(get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data) for f in fish_pool)
-        total_collected = sum(min(int(fish_collected.get(f["name"], 0)), get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data)) for f in fish_pool)
+        total_needed = sum(get_fish_trophy_requirement(f["name"], user_data) for f in fish_pool)
+        total_collected = sum(min(int(fish_collected.get(f["name"], 0)), get_fish_trophy_requirement(f["name"], user_data)) for f in fish_pool)
 
         embed = discord.Embed(
             title=f"🏆 {ctx.author.display_name}'s Fish Trophy Room",
@@ -1452,7 +1488,7 @@ async def trophy_add(ctx, *, fish_input: str):
         await ctx.send("❌ That fish doesn't exist.")
         return
 
-    required = get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(chosen_fish, 1), user_data)
+    required = get_fish_trophy_requirement(chosen_fish, user_data)
     current = int(fish_trophy.get(chosen_fish, 0))
     if current >= required:
         shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
@@ -1472,7 +1508,7 @@ async def trophy_add(ctx, *, fish_input: str):
     fish_trophy[chosen_fish] = current + add_amount
 
     if fish_trophy[chosen_fish] >= required:
-        fish_completed = all(int(fish_trophy.get(f["name"], 0)) >= get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data) for f in fish_pool)
+        fish_completed = all(int(fish_trophy.get(f["name"], 0)) >= get_fish_trophy_requirement(f["name"], user_data) for f in fish_pool)
         if fish_completed:
             grant_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"])
 
@@ -2922,8 +2958,11 @@ async def attempt_time_travel(ctx):
         await ctx.send("You can't do that yet! Check the time travel guide to check out why.")
         return
 
-    if int(user_data.get("gold", 0)) < 100000:
-        await ctx.send("❌ Time travel costs **100000** gold.")
+    current_time_travels = int(user_data.get("time_travels", 0))
+    time_travel_cost = TIME_TRAVEL_BASE_COST + (TIME_TRAVEL_COST_STEP * current_time_travels)
+
+    if int(user_data.get("gold", 0)) < time_travel_cost:
+        await ctx.send(f"❌ Time travel costs **{time_travel_cost}** gold.")
         return
 
     now = time.time()
@@ -2933,7 +2972,7 @@ async def attempt_time_travel(ctx):
         await ctx.send("⚠️ Time travel will reset your items, valuables, and progression. Run the command again within 20 seconds to confirm.")
         return
 
-    user_data["gold"] -= 100000
+    user_data["gold"] -= time_travel_cost
     user_data["xp"] = 0
     user_data["level"] = 1
     user_data["inventory"] = {}
@@ -3355,7 +3394,7 @@ async def guide(ctx):
                 "-Time travel unlocks when you own both badge rewards from the two trophy rooms.",
                 "-Required badges: Master of the Sea + Legendary Treasure Seeker.",
                 "-Use `sq tt` or `sq time travel` to time travel.",
-                "-Time traveling costs 100000 gold.",
+                "-Time travel cost starts at 100000 gold and increases by 25000 per time travel.",
                 "-Time travel resets your items, valuables, rods, trophies, and progression.",
                 "-Each time travel gives a permanent +10% rare fish odds boost.",
             ]),
