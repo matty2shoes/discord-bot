@@ -2389,7 +2389,7 @@ async def sell(ctx, *, args: str):
             return
 
         sold_message = (
-            f"{ctx.author.display_name} sold {', '.join(sold_treasures)} to the treasure trader for "
+            f"{ctx.author.display_name} sold {', '.join(sold_treasures)} to the treasure hoarder for "
             f"{total} gold <:coin:1399146146315894825>"
         )
 
@@ -2462,7 +2462,7 @@ async def sell(ctx, *, args: str):
                     user_data["treasures"].pop(name, None)
 
             sold_message = (
-                f"{ctx.author.display_name} sold {count} {name.title()} to the treasure trader for "
+                f"{ctx.author.display_name} sold {count} {name.title()} to the treasure hoarder for "
                 f"{total} gold <:coin:1399146146315894825>"
             )
 
