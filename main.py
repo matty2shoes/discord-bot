@@ -4,6 +4,9 @@ import random
 import time
 import os
 import json
+import math
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 from flask import Flask
 from threading import Thread
@@ -248,6 +251,11 @@ fish_pool = [{
     "emoji": "<:nemo:1478545130624647208>",
     "xp": 10000,
     "chance": 0.008
+}, {
+    "name": "mario judah",
+    "emoji": "<:mario_judah:1479711689015300106>",
+    "xp": 15000,
+    "chance": 0.004
 }]
 
 TROPHY_REQUIREMENTS = {
@@ -268,11 +276,27 @@ TROPHY_REQUIREMENTS = {
     "SUPER RARE LAM CHAD FISH EXTREME": 5,
     "fih": 1,
     "nemo": 1,
+    "mario judah": 1,
 }
 
 TROPHY_DISPLAY_NAMES = {
     "SUPER RARE LAM CHAD FISH EXTREME": "SRLCFE",
 }
+
+MASTER_OF_THE_SEA_BADGE = {
+    "name": "Master of the Sea",
+    "emoji": "<:masterofthesea:1479708010766012546>",
+}
+
+LEGENDARY_TREASURE_SEEKER_BADGE = {
+    "name": "Legendary Treasure Seeker",
+    "emoji": "<:legendarytreasureseeker:1479708227791753297>",
+}
+MASTER_TREASURE_SEEKER_ALIAS = "Master Treasure Seeker"
+
+ONE_PIECE_NAME = "the one piece"
+
+EXCLUDED_TROPHY_TREASURES = {ONE_PIECE_NAME}
 
 rods = {
     "wooden rod": {
@@ -355,6 +379,18 @@ boosts = {
         60 * 60,
         "description":
         "Automatically sell any fish you catch from 'sq cast' for 1 hour"
+    },
+    "extra love": {
+        "emoji": "💘",
+        "price": 500,
+        "duration": 60 * 60 * 2,
+        "description": "Cupid Rod extra-fish chance from 10% to 15% for 2 hours"
+    },
+    "deeper casts": {
+        "emoji": "🌊",
+        "price": 750,
+        "duration": 60 * 60 * 2,
+        "description": "Deep Sea Rod treasure chance 10%→15% and tier 1-3→1-4 for 2 hours"
     }
 }
 
@@ -502,6 +538,13 @@ treasure_index = {
         "min_value": 14000,
         "max_value": 16000,
         "tier": 6
+    },
+    "the one piece": {
+        "emoji": "<:one_piece:1479886286713131089>",
+        "min_value": 1,
+        "max_value": 1,
+        "tier": 7,
+        "sellable": False
     }
 }
 
@@ -564,6 +607,19 @@ chests = {
                 "max_tier": 6,
                 "rarity_bias": 0.3
             }
+        },
+    },
+    "deep sea chest": {
+        "emoji": "<:deep_sea_chest:1479889415374377161>",
+        "rewards": {
+            "gold": (5000, 9000),
+            "xp": (5000, 9000),
+            "treasures": {
+                "count": (3, 3),
+                "max_tier": 6,
+                "rarity_bias": 0.18
+            },
+            "one_piece_chance": 0.01
         },
     },
 }
@@ -641,6 +697,12 @@ def get_user_data(user):
             "bait_amount": 0,
             "fish_bowl": None,
             "trophy_room": [],
+            "treasure_trophy_room": {},
+            "badges": [],
+            "time_travels": 0,
+            "contract": None,
+            "contracts_meta": {},
+            "tt_confirm": 0,
         }
     else:
 
@@ -654,6 +716,8 @@ def get_user_data(user):
             users[uid]["fish_bowl"] = None
         if "trophy_room" not in users[uid]:
             users[uid]["trophy_room"] = []
+        if "treasure_trophy_room" not in users[uid]:
+            users[uid]["treasure_trophy_room"] = {}
 
 
     save_users()
@@ -676,6 +740,42 @@ def normalize_trophy_room(user_data):
         user_data["trophy_room"] = trophy_room
 
     return trophy_room
+
+
+def normalize_treasure_trophy_room(user_data):
+    room = user_data.get("treasure_trophy_room", {})
+    if not isinstance(room, dict):
+        room = {}
+        user_data["treasure_trophy_room"] = room
+    return room
+
+
+def has_badge(user_data, badge_name):
+    return badge_name in user_data.get("badges", [])
+
+
+def grant_badge(user_data, badge_name):
+    badges = user_data.setdefault("badges", [])
+    if badge_name not in badges:
+        badges.append(badge_name)
+        return True
+    return False
+
+
+def get_cast_cooldown_seconds(user_data):
+    return 22 if has_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"]) else 30
+
+
+def get_net_cooldown_seconds(user_data):
+    return 45 * 60 if has_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"]) else 60 * 60
+
+
+def get_adventure_cooldown_seconds(user_data):
+    return 90 * 60 if has_badge(user_data, LEGENDARY_TREASURE_SEEKER_BADGE["name"]) else 120 * 60
+
+
+def get_rare_fish_multiplier(user_data):
+    return 1.0 + (0.10 * int(user_data.get("time_travels", 0)))
 
 
 def get_level_info(xp):
@@ -773,6 +873,7 @@ def build_personal_fish_odds(user_data):
         rarity_mult *= float(baits[bait_name]["multiplier"])
 
     rarity_mult *= get_fishbowl_multiplier(user_data)
+    rarity_mult *= get_rare_fish_multiplier(user_data)
 
     weights = []
     for f in fish_pool:
@@ -848,6 +949,69 @@ def has_boost(user_data, boost_name):
             return False
     return False
 
+def make_contract_catalog_for_user(user_data):
+    now_est = datetime.now(ZoneInfo("America/New_York"))
+    slot_hour = (now_est.hour // 6) * 6
+    rotation = now_est.replace(hour=slot_hour, minute=0, second=0, microsecond=0)
+    seed = f"{rotation.isoformat()}:{int(user_data.get('time_travels', 0))}:{user_data.get('level', 1)}"
+    rng = random.Random(seed)
+
+    fish_names = [f['name'] for f in fish_pool if f['chance'] <= 7]
+    fish_pick = rng.choice(fish_names)
+
+    templates = {
+        "A": {
+            "label": "A",
+            "price": 500,
+            "goal": {"type": "cast", "target": rng.choice([15, 20])},
+            "reward_gold": rng.randint(350, 850),
+        },
+        "B": {
+            "label": "B",
+            "price": 1000,
+            "goal": {"type": "dig_bait", "target": rng.randint(4, 8)},
+            "reward_gold": rng.randint(900, 1700),
+        },
+        "C": {
+            "label": "C",
+            "price": 2000,
+            "goal": {"type": "catch_fish", "fish": fish_pick, "target": rng.randint(4, 9)},
+            "reward_gold": rng.randint(1400, 3000),
+        },
+    }
+    return rotation.timestamp(), templates
+
+
+def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
+    contract = user_data.get("contract")
+    if not contract:
+        return
+
+    if time.time() > float(contract.get("expires_at", 0)):
+        user_data["contract"] = None
+        return
+
+    goal = contract.get("goal", {})
+    progress = int(contract.get("progress", 0))
+
+    if goal.get("type") == "cast" and event_type == "cast":
+        progress += amount
+    elif goal.get("type") == "dig_bait" and event_type == "dig_bait":
+        progress += amount
+    elif goal.get("type") == "sell_treasure" and event_type == "sell_treasure":
+        progress += amount
+    elif goal.get("type") == "catch_fish" and event_type == "catch_fish" and fish_name == goal.get("fish"):
+        progress += amount
+    else:
+        return
+
+    contract["progress"] = progress
+    if progress >= int(goal.get("target", 1)):
+        reward = int(contract.get("reward_gold", 0))
+        user_data["gold"] = int(user_data.get("gold", 0)) + reward
+        user_data["contract"] = None
+
+
 @bot.command()
 async def dig(ctx):
     user_id = str(ctx.author.id)
@@ -889,6 +1053,7 @@ async def dig(ctx):
         second = random.choice(["worms", "leeches", "ramen noodles", "trippa snippas"])
         inv[second] = inv.get(second, 0) + 1
 
+    update_contract_progress(user_data, "dig_bait", 2 if got_second else 1)
     save_users()
 
     # 📦 Message formatting
@@ -1037,73 +1202,195 @@ async def trophy_room_view(ctx):
     await send_trophy_room(ctx)
 
 
+def get_scaled_trophy_requirement(base_amount, user_data):
+    return int(math.ceil(base_amount * (1 + 0.1 * int(user_data.get("time_travels", 0)))))
+
+
+def get_treasure_trophy_requirements(user_data):
+    req = {}
+    for name, info in treasure_index.items():
+        if name in EXCLUDED_TROPHY_TREASURES:
+            continue
+        req[name] = get_scaled_trophy_requirement(1, user_data)
+    return req
+
+
 async def send_trophy_room(ctx):
     user_data = get_user_data(ctx.author)
-    collected = normalize_trophy_room(user_data)
+    fish_collected = normalize_trophy_room(user_data)
+    treasure_collected = normalize_treasure_trophy_room(user_data)
+
+    fish_completed = all(
+        int(fish_collected.get(f["name"], 0)) >= get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data)
+        for f in fish_pool
+    )
+    if fish_completed:
+        grant_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"])
+
+    treasure_requirements = get_treasure_trophy_requirements(user_data)
+    treasure_completed = all(
+        int(treasure_collected.get(name, 0)) >= needed
+        for name, needed in treasure_requirements.items()
+    ) if treasure_requirements else False
+    if treasure_completed:
+        grant_badge(user_data, LEGENDARY_TREASURE_SEEKER_BADGE["name"])
+        grant_badge(user_data, MASTER_TREASURE_SEEKER_ALIAS)
+
     save_users()
 
-    lines = []
-    for fish in fish_pool:
-        fish_name = fish["name"]
-        needed = TROPHY_REQUIREMENTS.get(fish_name, 1)
-        count = int(collected.get(fish_name, 0))
-        count = max(0, min(count, needed))
-        marker = "✅" if count >= needed else "⬜"
-        display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
-        lines.append(f"{marker} {fish['emoji']} **{display_name}** ({count}/{needed})")
+    def build_fish_embed():
+        lines = []
+        for fish in fish_pool:
+            fish_name = fish["name"]
+            needed = get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(fish_name, 1), user_data)
+            count = int(fish_collected.get(fish_name, 0))
+            count = max(0, min(count, needed))
+            marker = "✅" if count >= needed else "⬜"
+            display_name = TROPHY_DISPLAY_NAMES.get(fish_name, fish_name.title())
+            lines.append(f"{marker} {fish['emoji']} **{display_name}** ({count}/{needed})")
 
-    total_needed = sum(TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
-    total_collected = sum(min(int(collected.get(f["name"], 0)), TROPHY_REQUIREMENTS.get(f["name"], 1)) for f in fish_pool)
-    completed = all(int(collected.get(f["name"], 0)) >= TROPHY_REQUIREMENTS.get(f["name"], 1) for f in fish_pool)
-    embed = discord.Embed(
-        title=f"🏆 {ctx.author.display_name}'s Trophy Room",
-        description="Add fish to your collection by using `sq trophy add <fish> <amount>`.",
-        color=discord.Color.gold()
-    )
+        total_needed = sum(get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data) for f in fish_pool)
+        total_collected = sum(min(int(fish_collected.get(f["name"], 0)), get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data)) for f in fish_pool)
 
-    embed.add_field(name="Collection", value="\n".join(lines), inline=False)
-
-    embed.add_field(
-        name="Progress",
-        value=f"{total_collected}/{total_needed} fish placed",
-        inline=False
-    )
-    embed.set_footer(
-        text=(
-            "Once your trophy room is complete, you'll be able to do something cool that I haven't added yet :0"
+        embed = discord.Embed(
+            title=f"🏆 {ctx.author.display_name}'s Fish Trophy Room",
+            description="Add fish with `sq trophy add <fish> <amount>`.",
+            color=discord.Color.green() if fish_completed else discord.Color.gold()
         )
-    )
+        embed.add_field(name="Collection", value="\n".join(lines), inline=False)
+        embed.add_field(name="Progress", value=f"{total_collected}/{total_needed} fish placed", inline=False)
+        if fish_completed:
+            embed.add_field(
+                name="Badge Earned",
+                value=f"{MASTER_OF_THE_SEA_BADGE['emoji']} **{MASTER_OF_THE_SEA_BADGE['name']}**\nCast cooldown 30s → 22s\nNet cooldown 1h → 45m",
+                inline=False,
+            )
+        return embed
 
-    if completed:
-        embed.color = discord.Color.green()
+    def build_treasure_embed():
+        lines = []
+        for treasure_name, needed in treasure_requirements.items():
+            info = treasure_index[treasure_name]
+            count = int(treasure_collected.get(treasure_name, 0))
+            count = max(0, min(count, needed))
+            marker = "✅" if count >= needed else "⬜"
+            lines.append(f"{marker} {info['emoji']} **{treasure_name.title()}** ({count}/{needed})")
 
-    await ctx.send(embed=embed)
+        total_needed = sum(treasure_requirements.values())
+        total_collected = sum(min(int(treasure_collected.get(name, 0)), needed) for name, needed in treasure_requirements.items())
+        embed = discord.Embed(
+            title=f"🏆 {ctx.author.display_name}'s Treasure Trophy Room",
+            description="Add treasures with `sq trophy add treasure <treasure> <amount>`.",
+            color=discord.Color.green() if treasure_completed else discord.Color.gold(),
+        )
+        embed.add_field(name="Collection", value="\n".join(lines) if lines else "No treasures configured.", inline=False)
+        embed.add_field(name="Progress", value=f"{total_collected}/{total_needed} treasures placed", inline=False)
+        if treasure_completed:
+            embed.add_field(
+                name="Badge Earned",
+                value=f"{LEGENDARY_TREASURE_SEEKER_BADGE['emoji']} **{LEGENDARY_TREASURE_SEEKER_BADGE['name']}**\nAdventure cooldown 2h → 1h 30m",
+                inline=False,
+            )
+        return embed
+
+    class TrophyView(discord.ui.View):
+        def __init__(self, author_id):
+            super().__init__(timeout=180)
+            self.author_id = author_id
+
+        async def interaction_check(self, interaction: discord.Interaction):
+            if interaction.user.id != self.author_id:
+                await interaction.response.send_message("❌ This trophy room menu isn't for you.", ephemeral=True)
+                return False
+            return True
+
+    view = TrophyView(ctx.author.id)
+
+    async def show_page(interaction, page_name):
+        embed = build_fish_embed() if page_name == "fish" else build_treasure_embed()
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    fish_button = discord.ui.Button(label="Fish Trophy Room", style=discord.ButtonStyle.primary)
+    treasure_button = discord.ui.Button(label="Treasure Trophy Room", style=discord.ButtonStyle.secondary)
+
+    async def fish_callback(interaction):
+        await show_page(interaction, "fish")
+
+    async def treasure_callback(interaction):
+        await show_page(interaction, "treasure")
+
+    fish_button.callback = fish_callback
+    treasure_button.callback = treasure_callback
+    view.add_item(fish_button)
+    view.add_item(treasure_button)
+
+    await ctx.send(embed=build_fish_embed(), view=view)
 
 
 @trophy_room.command(name="add")
 async def trophy_add(ctx, *, fish_input: str):
     user_data = get_user_data(ctx.author)
     inv = user_data.setdefault("inventory", {})
-    trophy = normalize_trophy_room(user_data)
+    fish_trophy = normalize_trophy_room(user_data)
+    treasure_trophy = normalize_treasure_trophy_room(user_data)
 
     parts = fish_input.strip().rsplit(" ", 1)
     amount = 1
-    fish_name = fish_input.strip()
+    item_name = fish_input.strip()
     if len(parts) == 2 and parts[1].isdigit():
-        fish_name = parts[0].strip()
+        item_name = parts[0].strip()
         amount = int(parts[1])
 
     if amount < 1:
         await ctx.send("❌ Amount must be at least 1.")
         return
 
-    chosen_fish = next((f["name"] for f in fish_pool if f["name"].lower() == fish_name.lower().strip()), None)
+    lower = item_name.lower().strip()
+    is_treasure_mode = False
+    if lower.startswith("treasure "):
+        is_treasure_mode = True
+        item_name = item_name[9:].strip()
+
+    if is_treasure_mode:
+        chosen_treasure = next((t for t in treasure_index if t.lower() == item_name.lower().strip()), None)
+        if not chosen_treasure or chosen_treasure in EXCLUDED_TROPHY_TREASURES:
+            await ctx.send("❌ That treasure can't be added to the trophy room.")
+            return
+
+        required = get_treasure_trophy_requirements(user_data).get(chosen_treasure, 1)
+        current = int(treasure_trophy.get(chosen_treasure, 0))
+        if current >= required:
+            await ctx.send(f"❌ You already reached the trophy goal for **{chosen_treasure.title()}** ({current}/{required}).")
+            return
+
+        available = int(inv.get(chosen_treasure, 0))
+        if available < 1:
+            await ctx.send("❌ You need that treasure in your inventory to place it in the trophy room.")
+            return
+
+        add_amount = min(amount, required - current, available)
+        inv[chosen_treasure] -= add_amount
+        if inv[chosen_treasure] <= 0:
+            del inv[chosen_treasure]
+
+        treasure_trophy[chosen_treasure] = current + add_amount
+        if treasure_trophy[chosen_treasure] >= required:
+            completed = all(int(treasure_trophy.get(name, 0)) >= need for name, need in get_treasure_trophy_requirements(user_data).items())
+            if completed:
+                grant_badge(user_data, LEGENDARY_TREASURE_SEEKER_BADGE["name"])
+                grant_badge(user_data, MASTER_TREASURE_SEEKER_ALIAS)
+
+        save_users()
+        await ctx.send(f"✅ Added **{add_amount} {chosen_treasure.title()}** to your treasure trophy room! ({treasure_trophy[chosen_treasure]}/{required})")
+        return
+
+    chosen_fish = next((f["name"] for f in fish_pool if f["name"].lower() == item_name.lower().strip()), None)
     if not chosen_fish:
         await ctx.send("❌ That fish doesn't exist.")
         return
 
-    required = TROPHY_REQUIREMENTS.get(chosen_fish, 1)
-    current = int(trophy.get(chosen_fish, 0))
+    required = get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(chosen_fish, 1), user_data)
+    current = int(fish_trophy.get(chosen_fish, 0))
     if current >= required:
         shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
         await ctx.send(f"❌ You already reached the trophy goal for **{shown_name}** ({current}/{required}).")
@@ -1114,31 +1401,22 @@ async def trophy_add(ctx, *, fish_input: str):
         await ctx.send("❌ You need that fish in your inventory to place it in the trophy room.")
         return
 
-    remaining_needed = required - current
-    add_amount = min(amount, remaining_needed, available)
-    if add_amount <= 0:
-        shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
-        await ctx.send(f"❌ You already reached the trophy goal for **{shown_name}** ({current}/{required}).")
-        return
-
+    add_amount = min(amount, required - current, available)
     inv[chosen_fish] -= add_amount
     if inv[chosen_fish] <= 0:
         del inv[chosen_fish]
 
-    trophy[chosen_fish] = current + add_amount
+    fish_trophy[chosen_fish] = current + add_amount
+
+    if fish_trophy[chosen_fish] >= required:
+        fish_completed = all(int(fish_trophy.get(f["name"], 0)) >= get_scaled_trophy_requirement(TROPHY_REQUIREMENTS.get(f["name"], 1), user_data) for f in fish_pool)
+        if fish_completed:
+            grant_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"])
+
     save_users()
     shown_name = TROPHY_DISPLAY_NAMES.get(chosen_fish, chosen_fish.title())
-    if add_amount < amount:
-        await ctx.send(
-            f"✅ Added **{add_amount} {shown_name}** to your trophy room "
-            f"(requested {amount}). ({trophy[chosen_fish]}/{required})"
-        )
-        return
+    await ctx.send(f"✅ Added **{add_amount} {shown_name}** to your trophy room! ({fish_trophy[chosen_fish]}/{required})")
 
-    await ctx.send(
-        f"✅ Added **{add_amount} {shown_name}** to your trophy room! "
-        f"({trophy[chosen_fish]}/{required})"
-    )
 
 @bot.command()
 async def net(ctx):
@@ -1146,8 +1424,9 @@ async def net(ctx):
     user_data = get_user_data(ctx.author)
     now = time.time()
 
-    if user_id in net_cooldowns and now - net_cooldowns[user_id] < 3600:
-        remaining = 3600 - (now - net_cooldowns[user_id])
+    net_cd = get_net_cooldown_seconds(user_data)
+    if user_id in net_cooldowns and now - net_cooldowns[user_id] < net_cd:
+        remaining = net_cd - (now - net_cooldowns[user_id])
         await ctx.send(
             f"🕓 You must wait {format_duration(remaining)} before throwing your net to sea again."
         )
@@ -1163,7 +1442,7 @@ async def net(ctx):
 
     catch_amount = random.randint(10, 15)
 
-    rarity_mult = get_fishbowl_multiplier(user_data)
+    rarity_mult = get_fishbowl_multiplier(user_data) * get_rare_fish_multiplier(user_data)
     adjusted_chances = [
         (f["chance"] * (1 + rarity_bonus)) * rarity_weight((f["chance"] * (1 + rarity_bonus)), rarity_mult)
         for f in fish_pool
@@ -1384,10 +1663,11 @@ async def adventure(ctx):
     user_data = get_user_data(user)
     now = time.time()
 
+    adv_cd = get_adventure_cooldown_seconds(user_data)
     if user_id in adventure_cooldowns:
         elapsed = now - adventure_cooldowns[user_id]
-        if elapsed < 7200:
-            remaining = int((7200 - elapsed) // 60)
+        if elapsed < adv_cd:
+            remaining = int((adv_cd - elapsed) // 60)
             await ctx.send(
                 "🕓 You can not adventure again yet, check cooldown with 'sq cd'"
             )
@@ -1396,8 +1676,8 @@ async def adventure(ctx):
     adventure_cooldowns[user_id] = time.time()
     save_cooldowns()
 
-    chest_names = list(chests.keys())
-    weights = [50, 20, 15, 10, 5]
+    chest_names = ["chest", "silver chest", "ruby chest", "diamond chest", "godly chest", "deep sea chest"]
+    weights = [49.75, 20, 15, 10, 4.75, 0.5]
 
     chest_amount = 2 if random.random() < 0.20 else 1
 
@@ -1424,8 +1704,9 @@ async def cast(ctx):
     user_data = get_user_data(ctx.author)
     now = time.time()
 
-    if user_id in cooldowns and now - cooldowns[user_id] < 30:
-        remaining = round(30 - (now - cooldowns[user_id]), 1)
+    cast_cd = get_cast_cooldown_seconds(user_data)
+    if user_id in cooldowns and now - cooldowns[user_id] < cast_cd:
+        remaining = round(cast_cd - (now - cooldowns[user_id]), 1)
         await ctx.send(
             f"⏳ {ctx.author.display_name}, you need to wait {remaining}s before fishing again."
         )
@@ -1442,9 +1723,18 @@ async def cast(ctx):
     cupid_extra_cast = rod_data.get("double_cast_chance", 0)
     deep_sea_treasure_chance = rod_data.get("treasure_cast_chance", 0)
 
+    if equipped_rod == "cupid rod" and has_boost(user_data, "extra love"):
+        cupid_extra_cast = 0.15
+
+    deep_sea_min_tier = 1
+    deep_sea_max_tier = 3
+    if equipped_rod == "deep sea rod" and has_boost(user_data, "deeper casts"):
+        deep_sea_treasure_chance = 0.15
+        deep_sea_max_tier = 4
+
     deep_sea_bonus_treasure = None
     if deep_sea_treasure_chance > 0 and random.random() < deep_sea_treasure_chance:
-        deep_sea_bonus_treasure = choose_equal_tier_treasure(1, 3)
+        deep_sea_bonus_treasure = choose_equal_tier_treasure(deep_sea_min_tier, deep_sea_max_tier)
 
     casts = base_casts
     if cupid_extra_cast > 0 and random.random() < cupid_extra_cast:
@@ -1461,6 +1751,7 @@ async def cast(ctx):
             rarity_mult *= float(baits[bait_name]["multiplier"])
 
         rarity_mult *= get_fishbowl_multiplier(user_data)
+        rarity_mult *= get_rare_fish_multiplier(user_data)
 
         weights = []
         for f in fish_pool:
@@ -1482,6 +1773,9 @@ async def cast(ctx):
         else:
             user_data["inventory"][name] = user_data["inventory"].get(name, 0) + 1
             gold_earned = int(xp * (1 + gold_bonus))
+
+        update_contract_progress(user_data, "cast", 1)
+        update_contract_progress(user_data, "catch_fish", 1, name)
 
         new_level, xp_into_level, next_level_xp = get_level_info(user_data["xp"])
         if new_level > user_data.get("level", 1):
@@ -1669,6 +1963,11 @@ async def open_chest(ctx, *, args: str):
                         user_data["treasures"][name] = user_data["treasures"].get(name, 0) + 1
                         found_treasures.append(name)
 
+                    if chest_name == "deep sea chest" and random.random() < rewards.get("one_piece_chance", 0):
+                        user_data["inventory"][ONE_PIECE_NAME] = user_data["inventory"].get(ONE_PIECE_NAME, 0) + 1
+                        user_data["treasures"][ONE_PIECE_NAME] = user_data["treasures"].get(ONE_PIECE_NAME, 0) + 1
+                        found_treasures.append(ONE_PIECE_NAME)
+
             user_chests[chest_name] -= to_open
 
         user_data["gold"] += total_gold
@@ -1784,6 +2083,11 @@ async def open_chest(ctx, *, args: str):
                     name, 0) + 1
                 found_treasures.append(name)
 
+            if chest_name == "deep sea chest" and random.random() < rewards.get("one_piece_chance", 0):
+                user_data["inventory"][ONE_PIECE_NAME] = user_data["inventory"].get(ONE_PIECE_NAME, 0) + 1
+                user_data["treasures"][ONE_PIECE_NAME] = user_data["treasures"].get(ONE_PIECE_NAME, 0) + 1
+                found_treasures.append(ONE_PIECE_NAME)
+
     user_data["gold"] += total_gold
     user_data["xp"] += total_xp
     user_chests[chest_name] -= to_open
@@ -1825,17 +2129,20 @@ async def cooldown_check(ctx):
     user_data = get_user_data(ctx.author)
 
     cast_remaining = 0
-    if user_id in cooldowns and now - cooldowns[user_id] < 30:
-        cast_remaining = 30 - (now - cooldowns[user_id])
+    cast_cd = get_cast_cooldown_seconds(user_data)
+    if user_id in cooldowns and now - cooldowns[user_id] < cast_cd:
+        cast_remaining = cast_cd - (now - cooldowns[user_id])
 
     adventure_remaining = 0
+    adv_cd = get_adventure_cooldown_seconds(user_data)
     if user_id in adventure_cooldowns and now - adventure_cooldowns[
-            user_id] < 7200:
-        adventure_remaining = 7200 - (now - adventure_cooldowns[user_id])
+            user_id] < adv_cd:
+        adventure_remaining = adv_cd - (now - adventure_cooldowns[user_id])
 
     net_remaining = 0
-    if user_id in net_cooldowns and now - net_cooldowns[user_id] < 3600:
-        net_remaining = 3600 - (now - net_cooldowns[user_id])
+    net_cd = get_net_cooldown_seconds(user_data)
+    if user_id in net_cooldowns and now - net_cooldowns[user_id] < net_cd:
+        net_remaining = net_cd - (now - net_cooldowns[user_id])
 
     dig_remaining = 0
     if user_id in dig_cooldowns and now - dig_cooldowns[user_id] < 600:
@@ -1845,6 +2152,8 @@ async def cooldown_check(ctx):
     emoji_map = {
         "double cast": "<:double_cast:1399044646700716154>",
         "autosell": "<:autosell:1399198067533680741>",
+        "extra love": "💘",
+        "deeper casts": "🌊",
     }
 
     for boost in user_data.get("boosts", {}):
@@ -1855,8 +2164,17 @@ async def cooldown_check(ctx):
             active_boosts.append(
                 f"{emoji} {boost_name} ({format_duration(remaining)} left)")
 
-    boost_text = "\n".join(
-        active_boosts) if active_boosts else "No boosts active"
+    if has_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"]):
+        active_boosts.append(
+            f"{MASTER_OF_THE_SEA_BADGE['emoji']} Master of the Sea\n• Cast cooldown: 30s → 22s\n• Net cooldown: 1h → 45m"
+        )
+
+    if has_badge(user_data, LEGENDARY_TREASURE_SEEKER_BADGE["name"]):
+        active_boosts.append(
+            f"{LEGENDARY_TREASURE_SEEKER_BADGE['emoji']} Legendary Treasure Seeker\n• Adventure cooldown: 2h → 1h 30m"
+        )
+
+    boost_text = "\n".join(active_boosts) if active_boosts else "No boosts active"
 
     desc_lines = [
         f"{'✅ -- Cast' if cast_remaining == 0 else f'🕓 -- Cast ({format_duration(cast_remaining)})'}",
@@ -1886,8 +2204,15 @@ async def profile(ctx, member: discord.Member = None):
     level, xp_into_level, next_level_xp = get_level_info(user_data["xp"])
     percent = int((xp_into_level / next_level_xp) * 100) if next_level_xp > 0 else 0
 
+    title_badges = []
+    if has_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"]):
+        title_badges.append(MASTER_OF_THE_SEA_BADGE["emoji"])
+    if has_badge(user_data, LEGENDARY_TREASURE_SEEKER_BADGE["name"]):
+        title_badges.append(LEGENDARY_TREASURE_SEEKER_BADGE["emoji"])
+    suffix = (" " + " ".join(title_badges)) if title_badges else ""
+
     embed = discord.Embed(
-        title=f"{member.display_name}'s Profile",
+        title=f"{member.display_name}'s Profile{suffix}",
         color=discord.Color.blue()
     )
 
@@ -1938,13 +2263,13 @@ async def profile(ctx, member: discord.Member = None):
         bait_mult = float(baits[bait_name]["multiplier"])
 
     bowl_mult = get_fishbowl_multiplier(user_data)
-    combined_rare_odds_increase = (bait_mult * bowl_mult - 1.0) * 100
+    combined_rare_odds_increase = (bait_mult * bowl_mult * get_rare_fish_multiplier(user_data) - 1.0) * 100
 
     embed.add_field(
         name="━━ <:wooden_rod:1399044497068920912> Fishing Stats ━━",
         value=(
             f"Fish caught: <:fish:1399192790797127861> *{total_fish}*\n"
-            f"Total rare fish odds: +*{combined_rare_odds_increase:.1f}%*"
+            f"Total rare fish odds: +*{combined_rare_odds_increase:.1f}%*\nTime Travels: **{int(user_data.get('time_travels', 0))}**"
         ),
         inline=False
     )
@@ -1995,7 +2320,8 @@ async def shop(ctx):
 
         if data.get("treasure_cast_chance", 0) > 0:
             treasure_cast_percent = int(data["treasure_cast_chance"] * 100)
-            abilities.append(f"{treasure_cast_percent}% chance to pull a tier 1-3 treasure")
+            tier_text = "tier 1-4" if name == "deep sea rod" and has_boost(user_data, "deeper casts") else "tier 1-3"
+            abilities.append(f"{treasure_cast_percent}% chance to pull a {tier_text} treasure")
 
         ability_text = ""
         if abilities:
@@ -2368,6 +2694,8 @@ async def sell(ctx, *, args: str):
     elif parts == ["all", "treasure"]:
         sold_treasures = []
         for treasure_name, treasure_data in treasure_index.items():
+            if treasure_name == ONE_PIECE_NAME:
+                continue
             count = inv.get(treasure_name, 0)
             if count > 0:
                 gold = sum(get_treasure_sell_value(treasure_name) for _ in range(count))
@@ -2383,6 +2711,7 @@ async def sell(ctx, *, args: str):
                         user_data["treasures"].pop(treasure_name, None)
 
                 sold_treasures.append(f"{count} {treasure_name.title()}")
+                update_contract_progress(user_data, "sell_treasure", count)
 
         if not sold_treasures:
             await ctx.send("❌ You have no treasure to sell.")
@@ -2450,6 +2779,9 @@ async def sell(ctx, *, args: str):
 
         # ── TREASURES ──
         elif name in treasure_index:
+            if name == ONE_PIECE_NAME or not treasure_index[name].get("sellable", True):
+                await ctx.send("❌ You can't sell that treasure.")
+                return
             total = sum(get_treasure_sell_value(name) for _ in range(count))
             inv[name] -= count
             if inv[name] <= 0:
@@ -2465,6 +2797,7 @@ async def sell(ctx, *, args: str):
                 f"{ctx.author.display_name} sold {count} {name.title()} to the treasure hoarder for "
                 f"{total} gold <:coin:1399146146315894825>"
             )
+            update_contract_progress(user_data, "sell_treasure", count)
 
         # ── BAITS ── (75% resale value)
         elif name in baits:
@@ -2488,6 +2821,180 @@ async def sell(ctx, *, args: str):
     user_data["gold"] = user_data.get("gold", 0) + total
     await ctx.send(sold_message)
     save_users()
+
+@bot.command(name="use")
+async def use_item(ctx, *, item_name: str):
+    user_data = get_user_data(ctx.author)
+    inv = user_data.setdefault("inventory", {})
+    key = item_name.lower().strip()
+
+    if key != ONE_PIECE_NAME:
+        await ctx.send("❌ You can't use that item.")
+        return
+
+    if int(inv.get(ONE_PIECE_NAME, 0)) < 1:
+        await ctx.send("❌ You don't have The One Piece.")
+        return
+
+    inv[ONE_PIECE_NAME] -= 1
+    if inv[ONE_PIECE_NAME] <= 0:
+        del inv[ONE_PIECE_NAME]
+
+    if ONE_PIECE_NAME in user_data.get("treasures", {}):
+        user_data["treasures"][ONE_PIECE_NAME] -= 1
+        if user_data["treasures"][ONE_PIECE_NAME] <= 0:
+            user_data["treasures"].pop(ONE_PIECE_NAME, None)
+
+    user_data["time_travels"] = int(user_data.get("time_travels", 0)) + 1
+    save_users()
+    await ctx.send(f"🏴‍☠️ You used **The One Piece**. Time Travels are now **{user_data['time_travels']}**.")
+
+
+async def attempt_time_travel(ctx):
+    user_data = get_user_data(ctx.author)
+    has_mots = has_badge(user_data, MASTER_OF_THE_SEA_BADGE["name"])
+    has_lts = has_badge(user_data, LEGENDARY_TREASURE_SEEKER_BADGE["name"]) or has_badge(user_data, MASTER_TREASURE_SEEKER_ALIAS)
+
+    if not (has_mots and has_lts):
+        await ctx.send("You can't do that yet! Check the time travel guide to check out why.")
+        return
+
+    if int(user_data.get("gold", 0)) < 100000:
+        await ctx.send("❌ Time travel costs **100000** gold.")
+        return
+
+    now = time.time()
+    if now - float(user_data.get("tt_confirm", 0)) > 20:
+        user_data["tt_confirm"] = now
+        save_users()
+        await ctx.send("⚠️ Time travel will reset your items, valuables, and progression. Run the command again within 20 seconds to confirm.")
+        return
+
+    user_data["gold"] -= 100000
+    user_data["xp"] = 0
+    user_data["level"] = 1
+    user_data["inventory"] = {}
+    user_data["rods"] = {"wooden rod": 1}
+    user_data["rod"] = "wooden rod"
+    user_data["total_fish"] = 0
+    user_data["boosts"] = {}
+    user_data["chests"] = {}
+    user_data["treasures"] = {}
+    user_data["bait"] = None
+    user_data["bait_uses"] = 0
+    user_data["bait_amount"] = 0
+    user_data["fish_bowl"] = None
+    user_data["trophy_room"] = {}
+    user_data["treasure_trophy_room"] = {}
+    user_data["badges"] = []
+    user_data["contract"] = None
+    user_data["contracts_meta"] = {}
+    user_data["time_travels"] = int(user_data.get("time_travels", 0)) + 1
+    user_data["tt_confirm"] = 0
+
+    uid = str(ctx.author.id)
+    cooldowns.pop(uid, None)
+    adventure_cooldowns.pop(uid, None)
+    net_cooldowns.pop(uid, None)
+    dig_cooldowns.pop(uid, None)
+    save_cooldowns()
+    save_users()
+    await ctx.send(f"🕒 {ctx.author.display_name} time traveled! Permanent rare fish odds increased. Total Time Travels: **{user_data['time_travels']}**.")
+
+
+@bot.command(name="tt")
+async def tt(ctx):
+    await attempt_time_travel(ctx)
+
+
+@bot.group(name="time", invoke_without_command=True)
+async def time_group(ctx):
+    await attempt_time_travel(ctx)
+
+
+@time_group.command(name="travel")
+async def time_travel_sub(ctx):
+    await attempt_time_travel(ctx)
+
+
+@bot.command(name="contracts")
+async def contracts_cmd(ctx):
+    user_data = get_user_data(ctx.author)
+    rotation_ts, catalog = make_contract_catalog_for_user(user_data)
+    now = time.time()
+
+    last_bought = float(user_data.get("contracts_meta", {}).get("last_bought", 0))
+    can_buy_in = max(0, (last_bought + 4 * 3600) - now)
+
+    lines = []
+    for key in ["A", "B", "C"]:
+        c = catalog[key]
+        goal = c["goal"]
+        if goal["type"] == "cast":
+            goal_text = f"Cast {goal['target']} times"
+        elif goal["type"] == "dig_bait":
+            goal_text = f"Find {goal['target']} bait from digging"
+        elif goal["type"] == "catch_fish":
+            fish = next((f for f in fish_pool if f["name"] == goal["fish"]), None)
+            fish_txt = f"{fish['emoji']} {goal['fish'].title()}" if fish else goal['fish'].title()
+            goal_text = f"Catch {goal['target']} {fish_txt}"
+        else:
+            goal_text = "Unknown"
+        lines.append(f"**{key}.** {c['price']} <:coin:1399146146315894825> — {goal_text} — Reward: {c['reward_gold']} gold")
+
+    if user_data.get("contract"):
+        active = user_data["contract"]
+        active_line = f"Active: {active['label']} ({active['progress']}/{active['goal']['target']}) — {format_duration(active['expires_at']-now)} left"
+    else:
+        active_line = "Active: None"
+
+    cd_line = "Ready to buy a contract" if can_buy_in <= 0 else f"Next purchase in {format_duration(can_buy_in)}"
+    await ctx.send("\n".join(["📜 **Faction Contracts**", *lines, "", active_line, cd_line]))
+
+
+@bot.group(name="contract", invoke_without_command=True)
+async def contract_group(ctx):
+    await contracts_cmd(ctx)
+
+
+@contract_group.command(name="accept")
+async def contract_accept(ctx, contract_letter: str):
+    user_data = get_user_data(ctx.author)
+    letter = contract_letter.upper().strip()
+    if letter not in {"A", "B", "C"}:
+        await ctx.send("❌ Contract must be A, B, or C.")
+        return
+
+    now = time.time()
+    meta = user_data.setdefault("contracts_meta", {})
+    last_bought = float(meta.get("last_bought", 0))
+    if now < last_bought + 4 * 3600:
+        await ctx.send(f"❌ You can buy another contract in {format_duration((last_bought + 4*3600) - now)}.")
+        return
+
+    if user_data.get("contract"):
+        await ctx.send("❌ Finish your current contract first.")
+        return
+
+    _, catalog = make_contract_catalog_for_user(user_data)
+    picked = catalog[letter]
+    price = int(picked["price"])
+    if int(user_data.get("gold", 0)) < price:
+        await ctx.send("❌ Not enough gold.")
+        return
+
+    user_data["gold"] -= price
+    user_data["contract"] = {
+        "label": letter,
+        "goal": picked["goal"],
+        "progress": 0,
+        "reward_gold": picked["reward_gold"],
+        "expires_at": now + 3600,
+    }
+    meta["last_bought"] = now
+    save_users()
+    await ctx.send(f"✅ Accepted contract **{letter}**. You have 1 hour to finish it.")
+
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -2682,12 +3189,15 @@ async def chest_index(ctx):
                     treasure_text = f"\n**+ Tier {min_tier} Treasures:**\n" + ", ".join(possible)
 
             previous_max_tier = max_tier
+        extra_text = ""
+        if name == "deep sea chest":
+            extra_text = "\n**Special:** 1% chance for <:one_piece:1479886286713131089> The One Piece"
 
         lines.append(
             f"{emoji} __**{name.title()}**__\n"
             f"<:coin:1399146146315894825> Gold: {gold_min}–{gold_max} | "
             f"<:level:1399200622779302004> XP: {xp_min}–{xp_max}"
-            f"{treasure_text}"
+            f"{treasure_text}{extra_text}"
         )
 
     embed = discord.Embed(
@@ -2723,6 +3233,7 @@ async def guide(ctx):
         "sq open all chest – Open every chest in your inventory",
         "sq sell <item> – Sell fish, treasures, or bait for gold",
         "sq disable <boost> - Disable an active boost",
+        "sq use one piece – ???",
     ]
     home_embed.add_field(
         name=
@@ -2738,7 +3249,10 @@ async def guide(ctx):
         "sq trophy room – View trophy room guide for details!",
         "sq shop – Where you can buy rods, boosts, and more",
         "sq buy <item> – Buy rods, boosts, bait, and fish bowl upgrades",
-        "sq cd / sq cooldown – Check cooldowns & see active boosts"
+        "sq cd / sq cooldown – Check cooldowns & see active boosts",
+        "sq contracts – View rotating faction contracts",
+        "sq contract accept <A/B/C> – Buy & accept a listed contract",
+        "sq tt / sq time travel – Reset progress for permanent rare fish odds"
     ]
     home_embed.add_field(name="━━━━ Inventory & Shops ━━━━",
                     value="\n".join(inventory_cmds),
@@ -2764,10 +3278,21 @@ async def guide(ctx):
         "Trophy Rooms": build_guide_embed(
             "📘 Guide Tutorial: Trophy Rooms",
             "\n".join([
-                "-A player's trophy room requires many fish to be filled up, and once completely filled, will do something! Undisclosed as of now! Yay!",
+                "-Trophy rooms now have 2 pages: fish trophy room and treasure trophy room.",
                 "-To add fish to your trophy room, use `sq trophy add <fish> <amount>`",
-                "-To view your fish bowl, simply do `sq trophy` or `sq trophy room`",
-                "Note that there is currently no way to remove a fish from your trophy room!",
+                "-Use `sq trophy` or `sq trophy room` then switch pages with the buttons at the bottom.",
+                "Use `sq trophy add treasure <treasure> <amount>` to add treasures to the treasure room.",
+            ]),
+            []),
+                "Time Travel": build_guide_embed(
+            "📘 Guide Tutorial: Time Travel",
+            "\n".join([
+                "-Time travel unlocks when you own both badge rewards from the two trophy rooms.",
+                "-Required badges: Master of the Sea + Legendary Treasure Seeker.",
+                "-Use `sq tt` or `sq time travel` to time travel.",
+                "-Time traveling costs 100000 gold.",
+                "-Time travel resets your items, valuables, rods, trophies, and progression.",
+                "-Each time travel gives a permanent +10% rare fish odds boost.",
             ]),
             []),
     }
