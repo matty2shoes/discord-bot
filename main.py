@@ -1029,10 +1029,20 @@ def make_contract_catalog_for_user(user_data):
     seed = f"{rotation.isoformat()}:{int(user_data.get('time_travels', 0))}:{user_data.get('level', 1)}"
     rng = random.Random(seed)
 
-    fish_names = [f['name'] for f in fish_pool if f['chance'] <= 15]
-    if not fish_names:
-        fish_names = [f['name'] for f in fish_pool]
-    fish_pick = rng.choice(fish_names)
+    fish_by_xp = sorted(fish_pool, key=lambda f: int(f.get("xp", 0)))
+    bait_by_price = sorted(baits.keys(), key=lambda name: int(baits[name].get("price", 0)))
+
+    def pick_fish(min_xp, max_xp):
+        pool = [f["name"] for f in fish_by_xp if min_xp <= int(f.get("xp", 0)) <= max_xp]
+        if not pool:
+            pool = [f["name"] for f in fish_by_xp]
+        return rng.choice(pool)
+
+    def pick_bait(min_price, max_price):
+        pool = [name for name in bait_by_price if min_price <= int(baits[name].get("price", 0)) <= max_price]
+        if not pool:
+            pool = bait_by_price
+        return rng.choice(pool)
 
     def build_contract_reward(label):
         chest_options = {
@@ -1059,27 +1069,63 @@ def make_contract_catalog_for_user(user_data):
 
         return reward
 
-    templates = {
-        "A": {
-            "label": "A",
-            "price": 500,
-            "goal": {"type": "cast", "target": rng.choice([8, 10, 12])},
-            "reward": build_contract_reward("A"),
-        },
-        "B": {
-            "label": "B",
-            "price": 1000,
-            "goal": {"type": "dig_bait", "target": rng.randint(3, 6)},
-            "reward": build_contract_reward("B"),
-        },
-        "C": {
-            "label": "C",
-            "price": 2000,
-            "goal": {"type": "catch_fish", "fish": fish_pick, "target": rng.randint(3, 6)},
-            "reward": build_contract_reward("C"),
-        },
-    }
+    def build_goal_for_tier(label):
+        # Each tier gets random goal types, but with difficulty scaled by tier.
+        options = {
+            "A": [
+                {"type": "cast", "target": rng.randint(8, 14)},
+                {"type": "catch_fish", "fish": pick_fish(1, 45), "target": rng.randint(2, 5)},
+                {"type": "dig_bait", "target": rng.randint(3, 6)},
+                {"type": "dig_specific_bait", "bait": pick_bait(100, 250), "target": rng.randint(2, 4)},
+                {"type": "gain_xp", "target": rng.randint(120, 220)},
+            ],
+            "B": [
+                {"type": "cast", "target": rng.randint(14, 22)},
+                {"type": "catch_fish", "fish": pick_fish(35, 95), "target": rng.randint(3, 7)},
+                {"type": "dig_bait", "target": rng.randint(6, 10)},
+                {"type": "dig_specific_bait", "bait": pick_bait(250, 350), "target": rng.randint(3, 6)},
+                {"type": "gain_xp", "target": rng.randint(260, 420)},
+            ],
+            "C": [
+                {"type": "cast", "target": rng.randint(22, 34)},
+                {"type": "catch_fish", "fish": pick_fish(80, 1000), "target": rng.randint(4, 9)},
+                {"type": "dig_bait", "target": rng.randint(10, 16)},
+                {"type": "dig_specific_bait", "bait": pick_bait(350, 500), "target": rng.randint(4, 8)},
+                {"type": "gain_xp", "target": rng.randint(500, 800)},
+            ],
+        }
+        return rng.choice(options[label])
+
+    templates = {}
+    for label, price in (("A", 500), ("B", 1000), ("C", 2000)):
+        templates[label] = {
+            "label": label,
+            "price": price,
+            "goal": build_goal_for_tier(label),
+            "reward": build_contract_reward(label),
+        }
     return rotation.timestamp(), templates
+
+
+def format_contract_goal(goal):
+    goal_type = goal.get("type")
+    if goal_type == "cast":
+        return f"Cast {goal['target']} times"
+    if goal_type == "dig_bait":
+        return f"Find {goal['target']} bait from digging"
+    if goal_type == "dig_specific_bait":
+        bait_name = goal.get("bait", "bait")
+        bait_label = format_bait_name(bait_name, goal['target']) if bait_name in baits else bait_name.title()
+        return f"Find {goal['target']} {baits.get(bait_name, {}).get('emoji', '')} {bait_label} from digging"
+    if goal_type == "catch_fish":
+        fish = next((f for f in fish_pool if f["name"] == goal["fish"]), None)
+        fish_txt = f"{fish['emoji']} {goal['fish'].title()}" if fish else goal['fish'].title()
+        return f"Catch {goal['target']} {fish_txt}"
+    if goal_type == "sell_treasure":
+        return f"Sell {goal['target']} treasures"
+    if goal_type == "gain_xp":
+        return f"Gain {goal['target']} XP"
+    return "Unknown"
 
 
 def format_contract_reward(reward):
@@ -1120,12 +1166,16 @@ def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
         progress += amount
     elif goal.get("type") == "dig_bait" and event_type == "dig_bait":
         progress += amount
+    elif goal.get("type") == "dig_specific_bait" and event_type == "dig_specific_bait" and fish_name == goal.get("bait"):
+        progress += amount
     elif goal.get("type") == "sell_treasure" and event_type == "sell_treasure":
         progress += amount
     elif goal.get("type") == "catch_fish" and event_type == "catch_fish" and fish_name == goal.get("fish"):
         progress += amount
+    elif goal.get("type") == "gain_xp" and event_type == "gain_xp":
+        progress += amount
     else:
-        return
+        return None
 
     contract["progress"] = progress
     if progress >= int(goal.get("target", 1)):
@@ -1147,7 +1197,36 @@ def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
         if reward_gold > 0:
             user_data["gold"] = int(user_data.get("gold", 0)) + reward_gold
 
+        completion = {
+            "label": contract.get("label", "?"),
+            "goal": goal,
+            "reward": reward,
+        }
+
         user_data["contract"] = None
+        return completion
+
+    return None
+
+
+async def send_contract_completion_embed(ctx, completion):
+    if not completion:
+        return
+
+    embed = discord.Embed(
+        title="✅ Contract Complete!",
+        color=discord.Color.green(),
+        description=(
+            f"{ctx.author.display_name} completed contract **{completion.get('label', '?')}**.\n"
+            f"Goal: {format_contract_goal(completion.get('goal', {}))}"
+        )
+    )
+    embed.add_field(
+        name="Rewards Granted",
+        value=format_contract_reward(completion.get("reward", {})),
+        inline=False
+    )
+    await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -1191,7 +1270,11 @@ async def dig(ctx):
         second = random.choice(["worms", "leeches", "ramen noodles", "trippa snippas"])
         inv[second] = inv.get(second, 0) + 1
 
-    update_contract_progress(user_data, "dig_bait", 2 if got_second else 1)
+    completion = update_contract_progress(user_data, "dig_bait", 2 if got_second else 1)
+    if first:
+        completion = completion or update_contract_progress(user_data, "dig_specific_bait", 1, first)
+    if second:
+        completion = completion or update_contract_progress(user_data, "dig_specific_bait", 1, second)
     save_users()
 
     # 📦 Message formatting
@@ -1208,6 +1291,7 @@ async def dig(ctx):
         )
 
     await ctx.send(message)
+    await send_contract_completion_embed(ctx, completion)
 
 @bot.group(invoke_without_command=True)
 async def fish(ctx):
@@ -1957,6 +2041,8 @@ async def cast(ctx):
     else:
         results = []
 
+    contract_completion = None
+
     for _ in range(casts):
         rarity_mult = 1.0
 
@@ -1988,7 +2074,8 @@ async def cast(ctx):
             user_data["inventory"][name] = user_data["inventory"].get(name, 0) + 1
             gold_earned = int(xp * (1 + gold_bonus))
 
-        update_contract_progress(user_data, "catch_fish", 1, name)
+        contract_completion = contract_completion or update_contract_progress(user_data, "catch_fish", 1, name)
+        contract_completion = contract_completion or update_contract_progress(user_data, "gain_xp", xp)
 
         new_level, xp_into_level, next_level_xp = get_level_info(user_data["xp"])
         if new_level > user_data.get("level", 1):
@@ -2002,7 +2089,7 @@ async def cast(ctx):
             result += f"\n<:moneysack:1478545126732333187> Sold instantly for {gold_earned} <:coin:1399146146315894825> (Autosell Active)"
         results.append(result)
 
-    update_contract_progress(user_data, "cast", 1)
+    contract_completion = contract_completion or update_contract_progress(user_data, "cast", 1)
 
 
     if deep_sea_bonus_treasure:
@@ -2041,6 +2128,7 @@ async def cast(ctx):
     embed = discord.Embed(color=discord.Color.yellow())
     embed.description = "\n".join(results)
     await ctx.send(embed=embed)
+    await send_contract_completion_embed(ctx, contract_completion)
     save_users()
 
 import os
@@ -2903,6 +2991,7 @@ async def sell(ctx, *, args: str):
 
     total = 0
     sold_message = ""
+    contract_completion = None
 
     # ✅ special case: "sq sell all fish"
     if parts == ["all", "fish"]:
@@ -2948,7 +3037,7 @@ async def sell(ctx, *, args: str):
                         user_data["treasures"].pop(treasure_name, None)
 
                 sold_treasures.append(f"{count} {treasure_name.title()}")
-                update_contract_progress(user_data, "sell_treasure", count)
+                contract_completion = contract_completion or update_contract_progress(user_data, "sell_treasure", count)
 
         if not sold_treasures:
             await ctx.send("❌ You have no treasure to sell.")
@@ -3034,7 +3123,7 @@ async def sell(ctx, *, args: str):
                 f"{ctx.author.display_name} sold {count} {name.title()} to the treasure hoarder for "
                 f"{total} gold <:coin:1399146146315894825>"
             )
-            update_contract_progress(user_data, "sell_treasure", count)
+            contract_completion = contract_completion or update_contract_progress(user_data, "sell_treasure", count)
 
         # ── BAITS ── (75% resale value)
         elif name in baits:
@@ -3057,6 +3146,7 @@ async def sell(ctx, *, args: str):
 
     user_data["gold"] = user_data.get("gold", 0) + total
     await ctx.send(sold_message)
+    await send_contract_completion_embed(ctx, contract_completion)
     save_users()
 
 @bot.command(name="use")
@@ -3169,17 +3259,7 @@ async def contracts_cmd(ctx):
     contract_lines = []
     for key in ["A", "B", "C"]:
         c = catalog[key]
-        goal = c["goal"]
-        if goal["type"] == "cast":
-            goal_text = f"Cast {goal['target']} times"
-        elif goal["type"] == "dig_bait":
-            goal_text = f"Find {goal['target']} bait from digging"
-        elif goal["type"] == "catch_fish":
-            fish = next((f for f in fish_pool if f["name"] == goal["fish"]), None)
-            fish_txt = f"{fish['emoji']} {goal['fish'].title()}" if fish else goal['fish'].title()
-            goal_text = f"Catch {goal['target']} {fish_txt}"
-        else:
-            goal_text = "Unknown"
+        goal_text = format_contract_goal(c["goal"])
         contract_lines.append(
             f"**{key}.** {c['price']} <:coin:1399146146315894825>\n"
             f"Goal: {goal_text}\n"
@@ -3191,6 +3271,7 @@ async def contracts_cmd(ctx):
         time_left = max(0, active['expires_at'] - now)
         active_line = (
             f"**{active['label']}** ({active['progress']}/{active['goal']['target']})\n"
+            f"Goal: {format_contract_goal(active['goal'])}\n"
             f"Expires in {format_duration(time_left)}"
         )
     else:
@@ -3250,7 +3331,10 @@ async def contract_accept(ctx, contract_letter: str):
     }
     meta["last_bought"] = now
     save_users()
-    await ctx.send(f"✅ Accepted contract **{letter}**. You have 1 hour to finish it.")
+    await ctx.send(
+        f"✅ Accepted contract **{letter}**. You have 1 hour to finish it.\n"
+        f"Goal: {format_contract_goal(picked['goal'])}"
+    )
 
 
 @bot.command()
