@@ -1051,6 +1051,86 @@ def make_contract_catalog_for_user(user_data):
             pool = bait_by_price
         return rng.choice(pool)
 
+    contract_scoring = {
+        "difficulty": {
+            "A": (8, 14),
+            "B": (12, 20),
+            "C": (16, 26),
+        },
+        "reward": {
+            "A": (7, 12),
+            "B": (10, 16),
+            "C": (13, 20),
+            "max_spread_per_tier": 4,
+        },
+    }
+
+    chest_reward_scores = {
+        "chest": 4,
+        "silver chest": 6,
+        "ruby chest": 8,
+        "diamond chest": 10,
+        "deep sea chest": 12,
+    }
+
+    fish_index = {fish["name"]: fish for fish in fish_pool}
+
+    def clamp_score_range(min_score, max_score):
+        if max_score < min_score:
+            max_score = min_score
+        return min_score, max_score
+
+    def estimate_goal_difficulty(goal):
+        goal_type = goal.get("type")
+        target = int(goal.get("target", 0))
+
+        if goal_type == "cast":
+            return target * 0.7
+
+        if goal_type == "dig_bait":
+            return target * 1.2
+
+        if goal_type == "dig_specific_bait":
+            bait_name = goal.get("bait", "")
+            bait_price = int(baits.get(bait_name, {}).get("price", 0))
+            bait_factor = 1.0 + min(1.0, bait_price / 500)
+            return target * 1.1 * bait_factor
+
+        if goal_type == "catch_fish":
+            fish_name = goal.get("fish", "")
+            fish_info = fish_index.get(fish_name, {})
+            fish_xp = int(fish_info.get("xp", 1))
+            rarity = float(fish_info.get("chance", 100))
+            rarity_factor = 1.0 + min(2.0, (100 - rarity) / 100)
+            xp_factor = 1.0 + min(1.2, fish_xp / 100)
+            return target * rarity_factor * xp_factor
+
+        if goal_type == "sell_treasure":
+            return target * 1.5
+
+        return float(target)
+
+    def estimate_reward_score(reward):
+        total = 0.0
+
+        for chest_name, amount in reward.get("chests", {}).items():
+            total += chest_reward_scores.get(chest_name, 5) * int(amount)
+
+        for bait_name, amount in reward.get("baits", {}).items():
+            bait_price = int(baits.get(bait_name, {}).get("price", 0))
+            total += max(1.0, bait_price / 100) * int(amount)
+
+        for treasure_name, amount in reward.get("treasures", {}).items():
+            treasure = treasure_index.get(treasure_name, {})
+            treasure_tier = int(treasure.get("tier", 1))
+            total += (treasure_tier * 2) * int(amount)
+
+        return total
+
+    def score_in_range(score, score_range):
+        min_score, max_score = clamp_score_range(score_range[0], score_range[1])
+        return min_score <= score <= max_score
+
     def estimate_contract_reward_value(reward):
         total = 0.0
 
@@ -1138,29 +1218,118 @@ def make_contract_catalog_for_user(user_data):
         }
         return rng.choice(options[label])
 
+    def build_scored_goal(label, attempts=120):
+        min_score, max_score = contract_scoring["difficulty"][label]
+        fallback_goal = build_goal_for_tier(label)
+        fallback_score = estimate_goal_difficulty(fallback_goal)
+
+        for _ in range(attempts):
+            goal = build_goal_for_tier(label)
+            score = estimate_goal_difficulty(goal)
+            fallback_goal, fallback_score = goal, score
+            if score_in_range(score, (min_score, max_score)):
+                return goal, score
+
+        return fallback_goal, fallback_score
+
+    def build_scored_reward(label, attempts=120):
+        min_score, max_score = contract_scoring["reward"][label]
+        fallback_reward = build_contract_reward(label)
+        fallback_score = estimate_reward_score(fallback_reward)
+
+        for _ in range(attempts):
+            reward = build_contract_reward(label)
+            score = estimate_reward_score(reward)
+            fallback_reward, fallback_score = reward, score
+            if score_in_range(score, (min_score, max_score)):
+                return reward, score
+
+        return fallback_reward, fallback_score
+
     templates = {
         "A": {
             "label": "A",
             "price": 500,
-            "goal": build_goal_for_tier("A"),
-            "reward": build_contract_reward("A"),
+            "goal": None,
+            "reward": None,
         },
         "B": {
             "label": "B",
             "price": 1000,
-            "goal": build_goal_for_tier("B"),
-            "reward": build_contract_reward("B"),
+            "goal": None,
+            "reward": None,
         },
         "C": {
             "label": "C",
             "price": 2000,
-            "goal": build_goal_for_tier("C"),
-            "reward": build_contract_reward("C"),
+            "goal": None,
+            "reward": None,
         },
     }
 
-    # Keep reward progression monotonic so lower contracts can never out-reward higher ones.
-    # We only reroll rewards; goals and prices stay fixed for the rotation.
+    contract_scores = {
+        "A": {"difficulty": 0.0, "reward": 0.0},
+        "B": {"difficulty": 0.0, "reward": 0.0},
+        "C": {"difficulty": 0.0, "reward": 0.0},
+    }
+
+    for label in ("A", "B", "C"):
+        goal, difficulty_score = build_scored_goal(label)
+        reward, reward_score = build_scored_reward(label)
+        templates[label]["goal"] = goal
+        templates[label]["reward"] = reward
+        contract_scores[label]["difficulty"] = difficulty_score
+        contract_scores[label]["reward"] = reward_score
+
+    def reroll_goal(label):
+        goal, difficulty_score = build_scored_goal(label)
+        templates[label]["goal"] = goal
+        contract_scores[label]["difficulty"] = difficulty_score
+
+    def reroll_reward(label):
+        reward, reward_score = build_scored_reward(label)
+        templates[label]["reward"] = reward
+        contract_scores[label]["reward"] = reward_score
+
+    # Keep A <= B <= C for both hidden difficulty and reward scores.
+    # Also cap adjacent reward jumps to avoid runaway value spikes.
+    max_reward_spread = contract_scoring["reward"].get("max_spread_per_tier", 4)
+    for _ in range(180):
+        a_diff = contract_scores["A"]["difficulty"]
+        b_diff = contract_scores["B"]["difficulty"]
+        c_diff = contract_scores["C"]["difficulty"]
+
+        a_reward_score = contract_scores["A"]["reward"]
+        b_reward_score = contract_scores["B"]["reward"]
+        c_reward_score = contract_scores["C"]["reward"]
+
+        rerolled = False
+
+        if a_diff > b_diff:
+            reroll_goal("A")
+            rerolled = True
+        if b_diff > c_diff:
+            reroll_goal("B")
+            rerolled = True
+
+        if a_reward_score > b_reward_score:
+            reroll_reward("A")
+            rerolled = True
+        if b_reward_score > c_reward_score:
+            reroll_reward("B")
+            rerolled = True
+
+        if (b_reward_score - a_reward_score) > max_reward_spread:
+            reroll_reward("B")
+            rerolled = True
+        if (c_reward_score - b_reward_score) > max_reward_spread:
+            reroll_reward("C")
+            rerolled = True
+
+        if not rerolled:
+            break
+
+    # Preserve the existing economic estimate guardrail as a final safety net.
     for _ in range(100):
         a_value = estimate_contract_reward_value(templates["A"]["reward"])
         b_value = estimate_contract_reward_value(templates["B"]["reward"])
@@ -1168,10 +1337,10 @@ def make_contract_catalog_for_user(user_data):
 
         rerolled = False
         if a_value > b_value:
-            templates["A"]["reward"] = build_contract_reward("A")
+            reroll_reward("A")
             rerolled = True
         if b_value > c_value:
-            templates["B"]["reward"] = build_contract_reward("B")
+            reroll_reward("B")
             rerolled = True
 
         if not rerolled:
