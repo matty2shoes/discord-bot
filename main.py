@@ -1238,19 +1238,19 @@ def make_contract_catalog_for_user(user_data, user_id=None):
         # "Cast X times" goals are intentionally less common to avoid overly easy rolls.
         weighted_options = {
             "A": [
-                ({"type": "cast", "target": rng.randint(8, 14)}, 1),
+                ({"type": "cast", "target": rng.randint(20, 34)}, 1),
                 ({"type": "catch_fish", "fish": pick_fish(1, 45), "target": rng.randint(2, 5)}, 2),
                 ({"type": "dig_bait", "target": rng.randint(3, 5)}, 2),
                 ({"type": "dig_specific_bait", "bait": pick_bait(100, 250), "target": rng.randint(2, 4)}, 2),
             ],
             "B": [
-                ({"type": "cast", "target": rng.randint(24, 38)}, 1),
+                ({"type": "cast", "target": rng.randint(35, 60)}, 1),
                 ({"type": "catch_fish", "fish": pick_fish(35, 95), "target": rng.randint(3, 7)}, 2),
                 ({"type": "dig_bait", "target": rng.randint(5, 7)}, 2),
                 ({"type": "dig_specific_bait", "bait": pick_bait(250, 350), "target": rng.randint(3, 6)}, 2),
             ],
             "C": [
-                ({"type": "cast", "target": rng.randint(40, 60)}, 1),
+                ({"type": "cast", "target": rng.randint(85, 100)}, 1),
                 ({"type": "catch_fish", "fish": pick_fish(80, 1000), "target": rng.randint(4, 9)}, 2),
                 ({"type": "dig_bait", "target": rng.randint(6, 10)}, 2),
                 ({"type": "dig_specific_bait", "bait": pick_bait(350, 500), "target": rng.randint(4, 8)}, 2),
