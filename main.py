@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import random
 import time
 import os
@@ -1507,6 +1507,84 @@ async def send_contract_completion_embed(ctx, completion):
         inline=False
     )
     await ctx.send(embed=embed)
+
+
+def build_contract_failure_embed(user_id, contract):
+    return discord.Embed(
+        title="❌ Contract Failed",
+        color=discord.Color.red(),
+        description=(
+            f"<@{user_id}> failed contract **{contract.get('label', '?')}**.\n"
+            f"Goal: {format_contract_goal(contract.get('goal', {}))}"
+        )
+    )
+
+
+def pop_expired_contract(user_data, now=None):
+    contract = user_data.get("contract")
+    if not contract:
+        return None
+
+    check_time = now if now is not None else time.time()
+    if check_time <= float(contract.get("expires_at", 0)):
+        return None
+
+    user_data["contract"] = None
+    return contract
+
+
+@tasks.loop(seconds=15)
+async def contract_expiry_watcher():
+    now = time.time()
+    users_changed = False
+
+    for user_id, user_data in list(users.items()):
+        expired_contract = pop_expired_contract(user_data, now)
+        if not expired_contract:
+            continue
+
+        users_changed = True
+        meta = user_data.get("contracts_meta", {})
+        channel_id = meta.get("last_sq_channel_id")
+
+        if not channel_id:
+            continue
+
+        try:
+            channel_id = int(channel_id)
+        except (TypeError, ValueError):
+            continue
+
+        channel = bot.get_channel(channel_id)
+        if channel is None:
+            try:
+                channel = await bot.fetch_channel(channel_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                continue
+
+        try:
+            await channel.send(embed=build_contract_failure_embed(user_id, expired_contract))
+        except (discord.Forbidden, discord.HTTPException):
+            continue
+
+    if users_changed:
+        save_users()
+
+
+@contract_expiry_watcher.before_loop
+async def before_contract_expiry_watcher():
+    await bot.wait_until_ready()
+
+
+@bot.before_invoke
+async def remember_last_sq_channel(ctx):
+    user_data = get_user_data(ctx.author)
+    meta = user_data.setdefault("contracts_meta", {})
+    channel_id = ctx.channel.id
+
+    if meta.get("last_sq_channel_id") != channel_id:
+        meta["last_sq_channel_id"] = channel_id
+        save_users()
 
 
 @bot.command()
@@ -3543,6 +3621,9 @@ async def contracts_cmd(ctx):
     rotation_ts, catalog = make_contract_catalog_for_user(user_data, ctx.author.id)
     now = time.time()
 
+    if pop_expired_contract(user_data, now):
+        save_users()
+
     last_bought = float(user_data.get("contracts_meta", {}).get("last_bought", 0))
     can_buy_in = max(0, (last_bought + 4 * 3600) - now)
 
@@ -3599,6 +3680,9 @@ async def contract_accept(ctx, contract_letter: str):
     if now < last_bought + 4 * 3600:
         await ctx.send(f"❌ You can buy another contract in {format_duration((last_bought + 4*3600) - now)}.")
         return
+
+    if pop_expired_contract(user_data, now):
+        save_users()
 
     if user_data.get("contract"):
         await ctx.send("❌ Finish your current contract first.")
@@ -3987,6 +4071,12 @@ async def guide(ctx):
         view.add_item(button)
 
     await ctx.send(embed=home_embed, view=view)
+
+
+@bot.event
+async def on_ready():
+    if not contract_expiry_watcher.is_running():
+        contract_expiry_watcher.start()
 
 
 @bot.event
