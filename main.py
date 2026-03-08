@@ -1466,8 +1466,10 @@ def update_contract_progress(user_data, event_type, amount=1, fish_name=None):
         for bait_name, amount in reward.get("baits", {}).items():
             inventory[bait_name] = int(inventory.get(bait_name, 0)) + int(amount)
 
+        inventory = user_data.setdefault("inventory", {})
         treasures = user_data.setdefault("treasures", {})
         for treasure_name, amount in reward.get("treasures", {}).items():
+            inventory[treasure_name] = int(inventory.get(treasure_name, 0)) + int(amount)
             treasures[treasure_name] = int(treasures.get(treasure_name, 0)) + int(amount)
 
         # Backward compatibility for contracts accepted before this update.
