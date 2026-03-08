@@ -3561,7 +3561,7 @@ async def contracts_cmd(ctx):
 
     embed = discord.Embed(
         title="📜 Faction Contracts",
-        description="Buy one contract every 4 hours. Each contract expires in 1 hour.",
+        description="Do `sq contract accept <A/B/C>` to buy a contract. You can buy one contract every 4 hours. Each contract expires after 1 hour.",
         color=discord.Color.dark_red()
     )
     embed.add_field(name="Available Contracts", value="\n\n".join(contract_lines), inline=False)
