@@ -4,6 +4,7 @@ import random
 import time
 import os
 import json
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
@@ -108,6 +109,16 @@ def chunk_lines_for_embed(lines, max_chars=1024):
         chunks.append("\n".join(current))
 
     return chunks
+
+
+def parse_single_mention_arg(ctx, raw_args):
+    if not raw_args:
+        return None
+    match = re.fullmatch(r"<@!?(\d+)>", raw_args.strip())
+    if not match:
+        return None
+    user_id = int(match.group(1))
+    return ctx.guild.get_member(user_id) if ctx.guild else None
 
 cooldowns_file = "cooldowns.json"
 
@@ -1661,12 +1672,16 @@ async def fish(ctx):
 
 @fish.command(name="bowl")
 async def fish_bowl(ctx, *, args: str = None):
-    user_data = get_user_data(ctx.author)
+    target_member = parse_single_mention_arg(ctx, args)
+    is_viewing_other = target_member is not None
+    viewed_member = target_member or ctx.author
+
+    user_data = get_user_data(viewed_member)
     inv = user_data.setdefault("inventory", {})
     bowl = normalize_fish_bowl(user_data)
 
     # VIEW current bowl
-    if not args:
+    if not args or is_viewing_other:
         fish_entries = bowl.get("fish", [])
         if not fish_entries:
             await ctx.send("Your fish bowl is empty. Use `sq fish bowl <fish> <nickname>`.")
@@ -1687,7 +1702,7 @@ async def fish_bowl(ctx, *, args: str = None):
                 lines.append(f"`{i + 1}.` ▫️ *Empty slot*")
 
         embed = discord.Embed(
-            title=f"{ctx.author.display_name}'s Fishbowl",
+            title=f"{viewed_member.display_name}'s Fishbowl",
             description="\n".join(lines) + f"\n\n+{percent}% Rare Fish Odds",
             color=discord.Color.from_rgb(255, 255, 255)
         )
@@ -1773,19 +1788,31 @@ async def fish_bowl(ctx, *, args: str = None):
 
 
 @bot.group(name="trophy", aliases=["tr"], invoke_without_command=True)
-async def trophy_room(ctx):
-    await send_trophy_room(ctx)
+async def trophy_room(ctx, *, args: str = None):
+    target_member = parse_single_mention_arg(ctx, args)
+    if args and not target_member:
+        await ctx.send("❌ Use `sq tr @user` to view another user's trophy room.")
+        return
+    await send_trophy_room(ctx, target_member)
 
 
 @trophy_room.command(name="room")
-async def trophy_room_view(ctx):
-    await send_trophy_room(ctx)
+async def trophy_room_view(ctx, *, args: str = None):
+    target_member = parse_single_mention_arg(ctx, args)
+    if args and not target_member:
+        await ctx.send("❌ Use `sq tr room @user` to view another user's trophy room.")
+        return
+    await send_trophy_room(ctx, target_member)
 
 
 @bot.command(name="trophyroom", aliases=["trroom", "trophy-room"])
-async def trophy_room_direct(ctx):
+async def trophy_room_direct(ctx, *, args: str = None):
     """Fallback direct command in case grouped subcommands fail to route."""
-    await send_trophy_room(ctx)
+    target_member = parse_single_mention_arg(ctx, args)
+    if args and not target_member:
+        await ctx.send("❌ Use `sq trophyroom @user` to view another user's trophy room.")
+        return
+    await send_trophy_room(ctx, target_member)
 
 
 def get_fish_trophy_requirement(fish_name, user_data):
@@ -1805,8 +1832,9 @@ def get_treasure_trophy_requirements(user_data):
     return req
 
 
-async def send_trophy_room(ctx):
-    user_data = get_user_data(ctx.author)
+async def send_trophy_room(ctx, member=None):
+    viewed_member = member or ctx.author
+    user_data = get_user_data(viewed_member)
     fish_collected = normalize_trophy_room(user_data)
     treasure_collected = normalize_treasure_trophy_room(user_data)
 
@@ -1877,7 +1905,7 @@ async def send_trophy_room(ctx):
         total_collected = sum(min(int(fish_collected.get(f["name"], 0)), get_fish_trophy_requirement(f["name"], user_data)) for f in fish_pool)
 
         embed = discord.Embed(
-            title=f"🏆 {ctx.author.display_name}'s Fish Trophy Room",
+            title=f"🏆 {viewed_member.display_name}'s Fish Trophy Room",
             description="Add fish with `sq trophy add <fish> <amount>`.",
             color=discord.Color.green() if fish_completed else discord.Color.gold()
         )
@@ -1914,7 +1942,7 @@ async def send_trophy_room(ctx):
         total_needed = sum(treasure_requirements.values())
         total_collected = sum(min(int(treasure_collected.get(name, 0)), needed) for name, needed in treasure_requirements.items())
         embed = discord.Embed(
-            title=f"🏆 {ctx.author.display_name}'s Treasure Trophy Room",
+            title=f"🏆 {viewed_member.display_name}'s Treasure Trophy Room",
             description="Add treasures with `sq trophy add treasure <treasure> <amount>`.",
             color=discord.Color.green() if treasure_completed else discord.Color.gold(),
         )
@@ -3616,9 +3644,15 @@ async def time_travel_sub(ctx):
 
 
 @bot.command(name="contracts")
-async def contracts_cmd(ctx):
-    user_data = get_user_data(ctx.author)
-    rotation_ts, catalog = make_contract_catalog_for_user(user_data, ctx.author.id)
+async def contracts_cmd(ctx, *, args: str = None):
+    target_member = parse_single_mention_arg(ctx, args)
+    if args and not target_member:
+        await ctx.send("❌ Use `sq contract @user` to view another user's contracts.")
+        return
+
+    viewed_member = target_member or ctx.author
+    user_data = get_user_data(viewed_member)
+    rotation_ts, catalog = make_contract_catalog_for_user(user_data, viewed_member.id)
     now = time.time()
 
     if pop_expired_contract(user_data, now):
@@ -3651,7 +3685,7 @@ async def contracts_cmd(ctx):
     cd_line = "Ready to buy a contract" if can_buy_in <= 0 else f"Next purchase in {format_duration(can_buy_in)}"
 
     embed = discord.Embed(
-        title="📜 Faction Contracts",
+        title=f"📜 {viewed_member.display_name}'s Faction Contracts",
         description="Do `sq contract accept <A/B/C>` to buy a contract. You can buy one contract every 4 hours. Each contract expires after 1 hour.",
         color=discord.Color.dark_red()
     )
@@ -3662,8 +3696,8 @@ async def contracts_cmd(ctx):
 
 
 @bot.group(name="contract", invoke_without_command=True)
-async def contract_group(ctx):
-    await contracts_cmd(ctx)
+async def contract_group(ctx, *, args: str = None):
+    await contracts_cmd(ctx, args=args)
 
 
 @contract_group.command(name="accept")
