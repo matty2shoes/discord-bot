@@ -61,6 +61,10 @@ def format_bait_name(bait_key, amount):
     plural = bait_key
     return singular.title() if amount == 1 else plural.title()
 
+
+def normalize_treasure_lookup_name(name):
+    return " ".join(name.lower().replace("'", "").split())
+
 def get_treasure_sell_value(treasure_name):
     treasure = treasure_index.get(treasure_name, {})
     min_value = int(treasure.get("min_value", treasure.get("value", 0)))
@@ -1924,7 +1928,11 @@ async def trophy_add(ctx, *, fish_input: str):
         item_name = item_name[9:].strip()
 
     if is_treasure_mode:
-        chosen_treasure = next((t for t in treasure_index if t.lower() == item_name.lower().strip()), None)
+        lookup_name = normalize_treasure_lookup_name(item_name)
+        chosen_treasure = next(
+            (t for t in treasure_index if normalize_treasure_lookup_name(t) == lookup_name),
+            None,
+        )
         if not chosen_treasure or chosen_treasure in EXCLUDED_TROPHY_TREASURES:
             await ctx.send("❌ That treasure can't be added to the trophy room.")
             return
