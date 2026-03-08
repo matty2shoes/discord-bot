@@ -416,7 +416,7 @@ rods = {
         "price": 30000,
         "bonus": 1.25,
     },
-    "tilda rod": {
+    "tildrod": {
         "emoji": "<:tilda_rod:1478909423169568970>",
         "price": 37500,
         "bonus": 1.50,
